@@ -1,4 +1,3 @@
-
 import sys
 import cv2 as cv
 import numpy as np
@@ -11,8 +10,8 @@ import time
 rc = racecar_core.create_racecar()
 
 global kP
-global maxc
-global perp
+global maxc # max contour area of any color
+global perp # perpendicular check
 perp = False
 maxc = None
 kP = -0.0038
@@ -25,7 +24,7 @@ GREEN  = ((50, 150, 50), (85, 255, 255))
 RED = ((0, 150, 50), (10, 255, 255)) 
 COLOR_PRIORITY = (RED, GREEN, BLUE)
 
-t = 3
+t = 3 # for perpendicular
 speed = 0.0
 angle = 0.0
 last_angle = angle
@@ -33,7 +32,7 @@ contour_center = None
 contour_area = 0
 contour_center_filtered = None
 
-SMOOTHING_FACTOR = 0.3
+SMOOTHING_FACTOR = 0.3 # reduces jerkiness
 MAX_ANGLE_CHANGE = 0.3
 
 def update_contour():
@@ -54,7 +53,9 @@ def update_contour():
     blue_mask = cv.inRange(hsv, BLUE[0], BLUE[1])
  
     blue_contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
+    
+    # precondition: called
+    # postconditon: returns the largest contour from the set it is called with
     def get_largest(contours):
         max_c = None
         max_area = 0
@@ -67,10 +68,10 @@ def update_contour():
 
     bluemax, bluearea = get_largest(blue_contours)
 
-    if bluemax is not None:
+    if bluemax is not None: # sets the maximum contour and it's area if it exists
         contour_center = rc_utils.get_contour_center(bluemax)
         contour_area = bluearea
-        maxc = bluemax
+        maxc = bluemax 
     else:
         contour_center = None
         contour_area = 0
@@ -79,9 +80,7 @@ def update_contour():
     cv.drawContours(image, blue_contours, 0, (255,0,0))
     rc.display.show_color_image(image)
 
-global st
-st = 0
-def start():
+def start(): # initializes values
     global speed
     global angle
     global contour_center_filtered
@@ -93,10 +92,10 @@ def start():
 
 
 
-def update():
-
+def update(): 
+    # calls update_contour and sets the angle of the car depending on where the line is
+    # also changes the angle of the car so it makes less jerky turns and is smooth
     global speed
-    global st
     global kP
     global angle
     global contour_center_filtered
@@ -130,9 +129,8 @@ def update():
         speed = 0.7
     rc.drive.set_speed_angle(speed, angle)
 
-def update_slow():
+def update_slow(): # prints where the line is detected as a visual image in terminal
     global maxc
-    global st
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
     else:
