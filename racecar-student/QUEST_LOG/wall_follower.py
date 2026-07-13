@@ -17,7 +17,7 @@ FRONT_CRITICAL = 60.0     # Trigger reverse if a wall is closer than this (cm)
 FRONT_CLEAR = 90.0        # Safe distance to switch back to forward drive (cm)
 
 # Steering Proportional Gain (Higher = faster corrections, lower = smoother)
-STEER_KP = 0.008         
+STEER_KP = -0.008         
 
 class State(Enum):
     FORWARD = 0

@@ -15,11 +15,11 @@ global perp # perpendicular check
 perp = False
 maxc = None
 kP = -0.0038
-MIN_CONTOUR_AREA = 20
+MIN_CONTOUR_AREA = 50
 
 CROP_FLOOR = ((360, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
-BLUE = ((90, 50, 50), (120, 255, 255))  
+BLUE = ((100, 120, 80), (118, 255, 255))
 GREEN  = ((50, 150, 50), (85, 255, 255))  
 RED = ((0, 150, 50), (10, 255, 255)) 
 COLOR_PRIORITY = (RED, GREEN, BLUE)
@@ -76,9 +76,9 @@ def update_contour():
         contour_center = None
         contour_area = 0
         maxc = None
-
-    cv.drawContours(image, blue_contours, 0, (255,0,0))
+    cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
     rc.display.show_color_image(image)
+
 
 def start(): # initializes values
     global speed
@@ -126,7 +126,7 @@ def update():
         angle += delta
         angle = rc_utils.clamp(angle, -1, 1)
     else:
-        speed = 0.7
+        speed = 0.4
     rc.drive.set_speed_angle(speed, angle)
 
 def update_slow(): # prints where the line is detected as a visual image in terminal
