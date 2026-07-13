@@ -14,7 +14,7 @@ global maxc # max contour area of any color
 global perp # perpendicular check
 perp = False
 maxc = None
-kP = 0.0005
+kP = 0.005
 MIN_CONTOUR_AREA = 200
 
 CROP_FLOOR = ((420, 0), (rc.camera.get_height(), rc.camera.get_width()))
@@ -76,7 +76,7 @@ def update_contour():
         contour_area = 0
         maxc = None
     cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    rc.display.show_color_image(image)
+    #rc.display.show_color_image(image)
 
 
 def start(): # initializes values
@@ -92,6 +92,7 @@ def start(): # initializes values
 
 global error
 error = 0.0
+
 def update(): 
     # calls update_contour and sets the angle of the car depending on where the line is
     # also changes the angle of the car so it makes less jerky turns and is smooth
@@ -103,21 +104,13 @@ def update():
     global perp
     global maxc
     global error 
-    last_angle = angle
+    global contour_center
 
     update_contour()
-    last_angle = angle  
 
     if contour_center is not None:
-        if contour_center_filtered is None:
-            contour_center_filtered = contour_center[1]
-        else:
-            contour_center_filtered = (
-                SMOOTHING_FACTOR * contour_center[1] +
-                (1 - SMOOTHING_FACTOR) * contour_center_filtered
-            )
-
-        error = contour_center_filtered - (rc.camera.get_width() // 2) - 44
+        contour_center_filtered = contour_center[1]
+        error = contour_center_filtered - (rc.camera.get_width() // 2) - 77
         new_angle = kP * error
         delta = new_angle - angle
         if delta > MAX_ANGLE_CHANGE:
@@ -125,11 +118,15 @@ def update():
         elif delta < -MAX_ANGLE_CHANGE:
             delta = -MAX_ANGLE_CHANGE
         angle += delta
+        angle -=- 0.05
         angle = rc_utils.clamp(angle, -1, 1)
-    rc.drive.set_speed_angle(0.2, angle - 0.05)
+    else:
+        angle = 0        
+    rc.drive.set_speed_angle(0.3, angle)
 
 def update_slow(): # prints where the line is detected as a visual image in terminal
     global maxc
+    global angle
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
     else:
@@ -144,6 +141,7 @@ def update_slow(): # prints where the line is detected as a visual image in term
             print("".join(s) + " : area = " + str(contour_area))
     global error
     print(error)
+    print(angle)
 
 
 
