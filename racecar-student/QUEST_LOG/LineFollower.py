@@ -14,12 +14,11 @@ global maxc # max contour area of any color
 global perp # perpendicular check
 perp = False
 maxc = None
-kP = -0.0038
-MIN_CONTOUR_AREA = 50
+kP = 0.0005
+MIN_CONTOUR_AREA = 200
 
-CROP_FLOOR = ((360, 0), (rc.camera.get_height(), rc.camera.get_width()))
-
-BLUE = ((100, 120, 80), (118, 255, 255))
+CROP_FLOOR = ((420, 0), (rc.camera.get_height(), rc.camera.get_width()))
+BLUE = ((85, 100, 150), (105, 255, 255))
 GREEN  = ((50, 150, 50), (85, 255, 255))  
 RED = ((0, 150, 50), (10, 255, 255)) 
 COLOR_PRIORITY = (RED, GREEN, BLUE)
@@ -47,7 +46,7 @@ def update_contour():
         contour_area = 0
         return
 
-    image = rc_utils.crop(image, (180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+    image = rc_utils.crop(image, (240, 0), (rc.camera.get_height(), rc.camera.get_width()))
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
     blue_mask = cv.inRange(hsv, BLUE[0], BLUE[1])
@@ -91,7 +90,8 @@ def start(): # initializes values
     rc.set_update_slow_time(0.5)
 
 
-
+global error
+error = 0.0
 def update(): 
     # calls update_contour and sets the angle of the car depending on where the line is
     # also changes the angle of the car so it makes less jerky turns and is smooth
@@ -102,6 +102,7 @@ def update():
     global last_angle
     global perp
     global maxc
+    global error 
     last_angle = angle
 
     update_contour()
@@ -116,7 +117,7 @@ def update():
                 (1 - SMOOTHING_FACTOR) * contour_center_filtered
             )
 
-        error = (rc.camera.get_width() // 2) - contour_center_filtered
+        error = contour_center_filtered - (rc.camera.get_width() // 2) - 44
         new_angle = kP * error
         delta = new_angle - angle
         if delta > MAX_ANGLE_CHANGE:
@@ -125,9 +126,7 @@ def update():
             delta = -MAX_ANGLE_CHANGE
         angle += delta
         angle = rc_utils.clamp(angle, -1, 1)
-    else:
-        speed = 0.4
-    rc.drive.set_speed_angle(speed, angle)
+    rc.drive.set_speed_angle(0.2, angle - 0.05)
 
 def update_slow(): # prints where the line is detected as a visual image in terminal
     global maxc
@@ -143,6 +142,8 @@ def update_slow(): # prints where the line is detected as a visual image in term
                 idx = 31
             s[idx] = "|"
             print("".join(s) + " : area = " + str(contour_area))
+    global error
+    print(error)
 
 
 
