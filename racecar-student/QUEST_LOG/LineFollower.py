@@ -51,13 +51,9 @@ def update_contour():
     image = rc_utils.crop(image, (180, 0), (rc.camera.get_height(), rc.camera.get_width()))
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
-    red_mask = cv.inRange(hsv, RED[0], RED[1])
     blue_mask = cv.inRange(hsv, BLUE[0], BLUE[1])
-    green_mask = cv.inRange(hsv, GREEN[0], GREEN[1])
-
-    red_contours, _ = cv.findContours(red_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+ 
     blue_contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    green_contours, _ = cv.findContours(green_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     def get_largest(contours):
         max_c = None
@@ -69,19 +65,9 @@ def update_contour():
                 max_c = c
         return max_c, max_area
 
-    redmax, redarea = get_largest(red_contours)
-    greenmax, greenarea = get_largest(green_contours)
     bluemax, bluearea = get_largest(blue_contours)
 
-    if redmax is not None:
-        contour_center = rc_utils.get_contour_center(redmax)
-        contour_area = redarea
-        maxc = redmax
-    elif greenmax is not None:
-        contour_center = rc_utils.get_contour_center(greenmax)
-        contour_area = greenarea
-        maxc = greenmax
-    elif bluemax is not None:
+    if bluemax is not None:
         contour_center = rc_utils.get_contour_center(bluemax)
         contour_area = bluearea
         maxc = bluemax
@@ -90,7 +76,7 @@ def update_contour():
         contour_area = 0
         maxc = None
 
-    cv.drawContours(image, red_contours, 0, (0,255,0))
+    cv.drawContours(image, blue_contours, 0, (255,0,0))
     rc.display.show_color_image(image)
 
 global st
@@ -147,7 +133,6 @@ def update():
 def update_slow():
     global maxc
     global st
-
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
     else:
