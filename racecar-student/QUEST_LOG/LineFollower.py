@@ -10,20 +10,15 @@ import time
 rc = racecar_core.create_racecar()
 
 global kP
-global maxc # max contour area of any color
-global perp # perpendicular check
-perp = False
+global maxc # max contour area of blue mask
 maxc = None
 kP = 0.005
 MIN_CONTOUR_AREA = 200
 
-CROP_FLOOR = ((420, 0), (rc.camera.get_height(), rc.camera.get_width()))
+# check the crop and hsv values
+CROP = ((240, 0), (rc.camera.get_height(), rc.camera.get_width()))
 BLUE = ((85, 100, 150), (105, 255, 255))
-GREEN  = ((50, 150, 50), (85, 255, 255))  
-RED = ((0, 150, 50), (10, 255, 255)) 
-COLOR_PRIORITY = (RED, GREEN, BLUE)
 
-t = 3 # for perpendicular
 speed = 0.0
 angle = 0.0
 last_angle = angle
@@ -31,8 +26,6 @@ contour_center = None
 contour_area = 0
 contour_center_filtered = None
 
-SMOOTHING_FACTOR = 0.3 # reduces jerkiness
-MAX_ANGLE_CHANGE = 0.3
 
 def update_contour():
     global maxc
@@ -46,7 +39,7 @@ def update_contour():
         contour_area = 0
         return
 
-    image = rc_utils.crop(image, (240, 0), (rc.camera.get_height(), rc.camera.get_width()))
+    image = rc_utils.crop(image, CROP[0], CROP[1])
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
     blue_mask = cv.inRange(hsv, BLUE[0], BLUE[1])
@@ -110,21 +103,15 @@ def update():
 
     if contour_center is not None:
         contour_center_filtered = contour_center[1]
-        error = contour_center_filtered - (rc.camera.get_width() // 2) - 77
-        new_angle = kP * error
-        delta = new_angle - angle
-        if delta > MAX_ANGLE_CHANGE:
-            delta = MAX_ANGLE_CHANGE
-        elif delta < -MAX_ANGLE_CHANGE:
-            delta = -MAX_ANGLE_CHANGE
-        angle += delta
-        angle -=- 0.05
+        error = contour_center_filtered - (rc.camera.get_width() // 2) - 77 # tune offset
+        angle = (kP * error) - 0.05
         angle = rc_utils.clamp(angle, -1, 1)
     else:
-        angle = 0        
+        angle = last_angle 
     rc.drive.set_speed_angle(0.3, angle)
+    last_angle = angle
 
-def update_slow(): # prints where the line is detected as a visual image in terminal
+def update_slow():
     global maxc
     global angle
     if rc.camera.get_color_image() is None:
