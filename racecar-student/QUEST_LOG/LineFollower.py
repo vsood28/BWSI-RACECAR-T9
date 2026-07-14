@@ -69,7 +69,7 @@ def update_contour():
         maxc = None
     cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
     rc.display.show_color_image(image)
-
+    
 
 def start(): # initializes values
     global speed
@@ -102,7 +102,7 @@ def update():
 
     if contour_center is not None:
         contour_center_filtered = contour_center[1]
-        error = contour_center_filtered - (rc.camera.get_width() // 2) - untitled.CAMERA_OFFSET # tune offset
+        error = (contour_center_filtered - untitled.CAMERA_OFFSET) - (rc.camera.get_width() // 2) # tune offset
         angle = (untitled.KP * error) - untitled.ANGLE_OFFSET
         angle = rc_utils.clamp(angle, -1, 1)
     else:
