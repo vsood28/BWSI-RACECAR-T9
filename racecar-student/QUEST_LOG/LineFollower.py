@@ -101,7 +101,7 @@ def update():
 
     update_contour()
 
-    if contour_center is not None:
+    if contour_center is not None: 
         contour_center_filtered = contour_center[1]
         error = contour_center_filtered - (rc.camera.get_width() // 2) - 77 # tune offset
         angle = (kP * error) - 0.05
