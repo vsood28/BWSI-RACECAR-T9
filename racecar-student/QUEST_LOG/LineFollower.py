@@ -7,19 +7,16 @@ import racecar_core
 import racecar_utils as rc_utils
 import time
 import importlib
-import config
+import untitled
 
 rc = racecar_core.create_racecar()
 
-global kP
 global maxc # max contour area of blue mask
 maxc = None
-kP = 0.005
-MIN_CONTOUR_AREA = 200
+MIN_CONTOUR_AREA = 9000 # tune
 
 # check the crop and hsv values
 CROP = ((240, 0), (rc.camera.get_height(), rc.camera.get_width()))
-BLUE = ((95, 50, 50), (125, 255, 255))
 
 speed = 0.0
 angle = 0.0
@@ -44,7 +41,7 @@ def update_contour():
     image = rc_utils.crop(image, CROP[0], CROP[1])
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
-    blue_mask = cv.inRange(hsv, BLUE[0], BLUE[1])
+    blue_mask = cv.inRange(hsv, untitled.BLUE[0], untitled.BLUE[1])
  
     blue_contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     
@@ -71,7 +68,7 @@ def update_contour():
         contour_area = 0
         maxc = None
     cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    #rc.display.show_color_image(image)
+    rc.display.show_color_image(image)
 
 
 def start(): # initializes values
@@ -83,21 +80,20 @@ def start(): # initializes values
     contour_center_filtered = None
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
+    rc.drive.set_max_speed(1)
 
 
 global error
 error = 0.0
 
 def update(): 
-    importlib.reload(config)
+    importlib.reload(untitled)
     # calls update_contour and sets the angle of the car depending on where the line is
     # also changes the angle of the car so it makes less jerky turns and is smooth
     global speed
-    global kP
     global angle
     global contour_center_filtered
     global last_angle
-    global perp
     global maxc
     global error 
     global contour_center
@@ -106,14 +102,14 @@ def update():
 
     if contour_center is not None:
         contour_center_filtered = contour_center[1]
-        error = contour_center_filtered - (rc.camera.get_width() // 2) - config.CAMERA_OFFSET # tune offset
-        angle = (config.KP * error) - config.ANGLE_OFFSET
+        error = contour_center_filtered - (rc.camera.get_width() // 2) - untitled.CAMERA_OFFSET # tune offset
+        angle = (untitled.KP * error) - untitled.ANGLE_OFFSET
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle 
-    rc.drive.set_speed_angle(0.3, angle)
-    rc.telemetry.declare_variables("Speed", "Angle", "Error", "Contour Area")
-    rc.telemetry.record(speed, angle, error, cv.contourArea(maxc))
+    rc.drive.set_speed_angle(1, angle)
+    rc.telemetry.declare_variables("Speed", "Angle", "Error")
+    rc.telemetry.record(speed, angle, error)
     last_angle = angle
 
 def update_slow():
