@@ -6,6 +6,8 @@ sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
 import time
+import importlib
+import config
 
 rc = racecar_core.create_racecar()
 
@@ -17,7 +19,7 @@ MIN_CONTOUR_AREA = 200
 
 # check the crop and hsv values
 CROP = ((240, 0), (rc.camera.get_height(), rc.camera.get_width()))
-BLUE = ((85, 100, 150), (105, 255, 255))
+BLUE = ((95, 50, 50), (125, 255, 255))
 
 speed = 0.0
 angle = 0.0
@@ -87,6 +89,7 @@ global error
 error = 0.0
 
 def update(): 
+    importlib.reload(config)
     # calls update_contour and sets the angle of the car depending on where the line is
     # also changes the angle of the car so it makes less jerky turns and is smooth
     global speed
@@ -103,17 +106,18 @@ def update():
 
     if contour_center is not None:
         contour_center_filtered = contour_center[1]
-        error = contour_center_filtered - (rc.camera.get_width() // 2) - 77 # tune offset
-        angle = (kP * error) - 0.05
+        error = contour_center_filtered - (rc.camera.get_width() // 2) - config.CAMERA_OFFSET # tune offset
+        angle = (config.KP * error) - config.ANGLE_OFFSET
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle 
     rc.drive.set_speed_angle(0.3, angle)
+    rc.telemetry.declare_variables("Speed", "Angle", "Error", "Contour Area")
+    rc.telemetry.record(speed, angle, error, cv.contourArea(maxc))
     last_angle = angle
 
 def update_slow():
     global maxc
-    global angle
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
     else:
@@ -126,9 +130,6 @@ def update_slow():
                 idx = 31
             s[idx] = "|"
             print("".join(s) + " : area = " + str(contour_area))
-    global error
-    print(error)
-    print(angle)
 
 
 
