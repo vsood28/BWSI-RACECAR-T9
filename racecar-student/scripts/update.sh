@@ -6,7 +6,7 @@
 
 # Github locations of simulator, library, and curriculum (labs)
 SIM_URL="https://github.com/MITRacecarNeo/RacecarNeo-Simulator.git"
-LIB_URL="https://github.com/MITRacecarNeo/racecar-neo-library.git"
+LIB_URL="https://github.com/atree12/racecar-neo-library.git"
 CURR_URL="https://github.com/MITRacecarNeo/racecar-neo-"
 
 # Get the full path of the current script
