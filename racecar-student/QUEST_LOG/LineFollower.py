@@ -6,25 +6,21 @@ sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
 import time
+import importlib
+import config
 
 rc = racecar_core.create_racecar()
 
 global kP
-global maxc # max contour area of any color
-global perp # perpendicular check
-perp = False
+global maxc # max contour area of blue mask
 maxc = None
-kP = -0.0038
-MIN_CONTOUR_AREA = 20
+kP = 0.005
+MIN_CONTOUR_AREA = 200
 
-CROP_FLOOR = ((360, 0), (rc.camera.get_height(), rc.camera.get_width()))
+# check the crop and hsv values
+CROP = ((240, 0), (rc.camera.get_height(), rc.camera.get_width()))
+BLUE = ((95, 50, 50), (125, 255, 255))
 
-BLUE = ((90, 50, 50), (120, 255, 255))  
-GREEN  = ((50, 150, 50), (85, 255, 255))  
-RED = ((0, 150, 50), (10, 255, 255)) 
-COLOR_PRIORITY = (RED, GREEN, BLUE)
-
-t = 3 # for perpendicular
 speed = 0.0
 angle = 0.0
 last_angle = angle
@@ -32,8 +28,6 @@ contour_center = None
 contour_area = 0
 contour_center_filtered = None
 
-SMOOTHING_FACTOR = 0.3 # reduces jerkiness
-MAX_ANGLE_CHANGE = 0.3
 
 def update_contour():
     global maxc
@@ -47,7 +41,7 @@ def update_contour():
         contour_area = 0
         return
 
-    image = rc_utils.crop(image, (180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+    image = rc_utils.crop(image, CROP[0], CROP[1])
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
     blue_mask = cv.inRange(hsv, BLUE[0], BLUE[1])
@@ -76,9 +70,9 @@ def update_contour():
         contour_center = None
         contour_area = 0
         maxc = None
+    cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
+    #rc.display.show_color_image(image)
 
-    cv.drawContours(image, blue_contours, 0, (255,0,0))
-    rc.display.show_color_image(image)
 
 def start(): # initializes values
     global speed
@@ -91,8 +85,11 @@ def start(): # initializes values
     rc.set_update_slow_time(0.5)
 
 
+global error
+error = 0.0
 
 def update(): 
+    importlib.reload(config)
     # calls update_contour and sets the angle of the car depending on where the line is
     # also changes the angle of the car so it makes less jerky turns and is smooth
     global speed
@@ -102,34 +99,24 @@ def update():
     global last_angle
     global perp
     global maxc
-    last_angle = angle
+    global error 
+    global contour_center
 
     update_contour()
-    last_angle = angle  
 
     if contour_center is not None:
-        if contour_center_filtered is None:
-            contour_center_filtered = contour_center[1]
-        else:
-            contour_center_filtered = (
-                SMOOTHING_FACTOR * contour_center[1] +
-                (1 - SMOOTHING_FACTOR) * contour_center_filtered
-            )
-
-        error = (rc.camera.get_width() // 2) - contour_center_filtered
-        new_angle = kP * error
-        delta = new_angle - angle
-        if delta > MAX_ANGLE_CHANGE:
-            delta = MAX_ANGLE_CHANGE
-        elif delta < -MAX_ANGLE_CHANGE:
-            delta = -MAX_ANGLE_CHANGE
-        angle += delta
+        contour_center_filtered = contour_center[1]
+        error = contour_center_filtered - (rc.camera.get_width() // 2) - config.CAMERA_OFFSET # tune offset
+        angle = (config.KP * error) - config.ANGLE_OFFSET
         angle = rc_utils.clamp(angle, -1, 1)
     else:
-        speed = 0.7
-    rc.drive.set_speed_angle(speed, angle)
+        angle = last_angle 
+    rc.drive.set_speed_angle(0.3, angle)
+    rc.telemetry.declare_variables("Speed", "Angle", "Error", "Contour Area")
+    rc.telemetry.record(speed, angle, error, cv.contourArea(maxc))
+    last_angle = angle
 
-def update_slow(): # prints where the line is detected as a visual image in terminal
+def update_slow():
     global maxc
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
