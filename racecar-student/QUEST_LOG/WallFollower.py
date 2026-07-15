@@ -29,10 +29,11 @@ def update():
     scan = rc.lidar.get_samples()
 
     #implement normalization condition.
+    #get left and right lidar scans with average distances
     right_dist = rc_utils.get_lidar_average_distance(scan, 50, 10)
     left_dist = rc_utils.get_lidar_average_distance(scan, 310, 10)
 
-    error = (left_dist - right_dist) / (left_dist + right_dist)
+    error = (left_dist - right_dist) / (left_dist + right_dist) 
 
     dt = rc.get_delta_time()
 
@@ -52,7 +53,7 @@ def update_slow():
     global angle
     global lastError
     global kP
-    print(f"Last Error: {lastError}")
+    print(f"Last Error: {lastError}") #print statements for debugging
     print(f"Angle: {angle}")
 
 
