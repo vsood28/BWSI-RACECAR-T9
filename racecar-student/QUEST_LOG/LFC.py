@@ -1,5 +1,5 @@
 
-KP = 0.005
+KP = 0.003
 KD = 0.003
 
 MIN_CONTOUR_AREA = 4000
