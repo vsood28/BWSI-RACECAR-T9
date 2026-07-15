@@ -7,6 +7,12 @@ import racecar_core
 import racecar_utils as rc_utils
 import WFC
 import importlib
+import csv
+import time
+
+log_file = None
+log_writer = None
+start_time = None
 
 rc = racecar_core.create_racecar()
 
@@ -15,10 +21,18 @@ lastError = 0
 
 def start():
     global lastError
+    global log_file, log_writer, start_time
 
     lastError = 0
     rc.drive.set_speed_angle(0, 0)
     rc.drive.set_max_speed(1)
+
+    start_time = time.time()
+
+    log_file = open("wall_follow_log.csv", "w", newline="")
+    log_writer = csv.writer(log_file)
+    log_writer.writerow(["time", "error", "angle"])
+
 
 global angle
 angle = 0.0
@@ -30,10 +44,10 @@ def update():
 
     #implement normalization condition.
     #get left and right lidar scans with average distances
-    right_dist = rc_utils.get_lidar_average_distance(scan, 50, 10)
-    left_dist = rc_utils.get_lidar_average_distance(scan, 310, 10)
+    right_dist = rc_utils.get_lidar_average_distance(scan, 60, 20)
+    left_dist = rc_utils.get_lidar_average_distance(scan, 300, 20)
 
-    error = (left_dist - right_dist) / (left_dist + right_dist) 
+    error = (left_dist - right_dist)
 
     dt = rc.get_delta_time()
 
@@ -42,12 +56,14 @@ def update():
     #print(WFC.KP * error)
     #print("Derivative")
     #print(WFC.KD * ((error - lastError) / dt))
+    elapsed = time.time() - start_time
+    log_writer.writerow([elapsed, error, angle])
     lastError = error
     angle = rc_utils.clamp(angle, -1, 1)
     rc.telemetry.declare_variables("Angle", "Error")
-    rc.telemetry.record(angle, error)
+    rc.telemetry.record(-angle, error)
     rc.drive.set_max_speed(1)
-    rc.drive.set_speed_angle(0.9, -angle)
+    rc.drive.set_speed_angle(0.8, -angle)
 
 
 def update_slow():
@@ -60,5 +76,8 @@ def update_slow():
 
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
-    rc.go()
-    rc.telemetry.visualize()
+    try:
+        rc.go()
+    finally:
+        if log_file is not None:
+            log_file.close()
