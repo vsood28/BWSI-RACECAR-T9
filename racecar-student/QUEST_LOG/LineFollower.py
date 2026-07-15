@@ -129,7 +129,8 @@ def update():
 
     lastFilteredError = filteredError
     lastError = error
-    rc.drive.set_speed_angle(0.7, angle)
+    speed = rc_utils.remap_range(abs(angle), 0, 1, 0.6, 0.25, True)
+    rc.drive.set_speed_angle(speed, angle)
     rc.telemetry.declare_variables("Speed", "Angle", "Error")
     rc.telemetry.record(speed, angle, error)
     last_angle = angle

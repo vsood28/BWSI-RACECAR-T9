@@ -20,13 +20,15 @@ def start():
     rc.drive.set_speed_angle(0, 0)
     rc.drive.set_max_speed(1)
 
-
+global angle
+angle = 0.0
 def update():
-    global kP, kD, lastError
+    global kP, kD, lastError, angle
 
     importlib.reload(WFC)
     scan = rc.lidar.get_samples()
 
+    #implement normalization condition.
     right_dist = rc_utils.get_lidar_average_distance(scan, 50, 10)
     left_dist = rc_utils.get_lidar_average_distance(scan, 310, 10)
 
@@ -40,12 +42,14 @@ def update():
     angle = rc_utils.clamp(angle, -1, 1)
 
     rc.drive.set_max_speed(1)
-    rc.drive.set_speed_angle(1, -angle)
+    rc.drive.set_speed_angle(0.9, -angle)
 
 
 def update_slow():
+    global angle
     global lastError
     print(f"Last Error: {lastError}")
+    print(f"Angle: {angle}")
 
 
 if __name__ == "__main__":
