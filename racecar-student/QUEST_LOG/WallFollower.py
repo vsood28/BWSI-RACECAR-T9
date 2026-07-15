@@ -32,13 +32,16 @@ def update():
     right_dist = rc_utils.get_lidar_average_distance(scan, 50, 10)
     left_dist = rc_utils.get_lidar_average_distance(scan, 310, 10)
 
-    error = left_dist - right_dist
+    error = (left_dist - right_dist) / (left_dist + right_dist)
 
     dt = rc.get_delta_time()
 
     angle = WFC.KP * error + WFC.KD * (error - lastError) / dt
+    #print("Proportional")
+    #print(WFC.KP * error)
+    #print("Derivative")
+    #print(WFC.KD * ((error - lastError) / dt))
     lastError = error
-
     angle = rc_utils.clamp(angle, -1, 1)
 
     rc.drive.set_max_speed(1)
@@ -48,6 +51,7 @@ def update():
 def update_slow():
     global angle
     global lastError
+    global kP
     print(f"Last Error: {lastError}")
     print(f"Angle: {angle}")
 
