@@ -44,7 +44,8 @@ def update():
     #print(WFC.KD * ((error - lastError) / dt))
     lastError = error
     angle = rc_utils.clamp(angle, -1, 1)
-
+    rc.telemetry.declare_variables("Angle", "Error")
+    rc.telemetry.record(angle, error)
     rc.drive.set_max_speed(1)
     rc.drive.set_speed_angle(0.9, -angle)
 
@@ -60,3 +61,4 @@ def update_slow():
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
     rc.go()
+    rc.telemetry.visualize()
