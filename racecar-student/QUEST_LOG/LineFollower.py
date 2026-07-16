@@ -21,7 +21,7 @@ maxc = None
 MIN_CONTOUR_AREA = 4000 # tune
 
 # check the crop and hsv values
-CROP = ((240, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -78,7 +78,7 @@ def update_contour():
         contour_area = 0
         maxc = None
     cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    rc.display.show_color_image(image)
+    #rc.display.show_color_image(image)
 
 
 def start():
@@ -99,7 +99,7 @@ def start():
 
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(1) #max speed always set to 1 until we upgrade speed
+    rc.drive.set_max_speed(1)
 
 
 def update():
@@ -113,11 +113,11 @@ def update():
     global lastError
     update_contour()
 
-    if contour_center is not None: #if we have a contour center, calculate error and follow the line
+    if contour_center is not None:
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
         dt = rc.get_delta_time()
         angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
-        #log to csv file for debugging
+        #log to csv file
         elapsed = time.time() - start_time
         log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
@@ -125,7 +125,7 @@ def update():
         angle = last_angle
 
     lastError = error
-    speed = 0.9 #change this speed value if we want to go faster
+    speed = 0.85
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
@@ -137,11 +137,11 @@ def update_slow():
     print(f"Speed {speed}")
     print(f"Angle {angle}")
     if rc.camera.get_color_image() is None:
-        print("X" * 10 + " (No image) " + "X" * 10) #Prints out "no image" if the camera isn't working
+        print("X" * 10 + " (No image) " + "X" * 10)
     else:
         if contour_center is None:
             print("-" * 32 + " : area = " + str(contour_area))
-        else: #prints out a visual representation of the contour center/line in the terminal
+        else:
             s = ["-"] * 32
             idx = int(contour_center[1] / 20)
             if idx >= 32:
