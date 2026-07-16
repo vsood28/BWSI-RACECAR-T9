@@ -5,8 +5,13 @@ import numpy as np
 sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
-import importlib
-import untitled
+import LFC
+import csv
+import time
+
+log_file = None
+log_writer = None
+start_time = None
 
 
 rc = racecar_core.create_racecar()
@@ -24,11 +29,6 @@ error = 0.0
 global lastError
 lastError = error
 
-global filteredError
-filteredError = 0.0
-
-global lastFilteredError
-lastFilteredError = 0.0
 
 speed = 0.0
 angle = 0.0
@@ -52,9 +52,7 @@ def update_contour():
 
     image = rc_utils.crop(image, CROP[0], CROP[1])
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-    hsv = cv.GaussianBlur(hsv, (5,5), 0)
-    blue_mask = cv.inRange(hsv, untitled.BLUE[0], untitled.BLUE[1])
-    blue_mask = cv.morphologyEx(blue_mask, cv.MORPH_OPEN, np.ones((5,5), np.uint8))
+    blue_mask = cv.inRange(hsv, LFC.BLUE[0], LFC.BLUE[1])
     blue_contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     
     # precondition: called
@@ -80,20 +78,24 @@ def update_contour():
         contour_area = 0
         maxc = None
     cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    #rc.display.show_color_image(image)
+    rc.display.show_color_image(image)
 
 
 def start():
     global speed
     global angle
     global contour_center_filtered
-    global filteredError
-    global lastFilteredError
+    global log_file, log_writer, start_time
     speed = 0
     angle = 0
     contour_center_filtered = None
-    filteredError = 0.0
-    lastFilteredError = 0.0
+
+    start_time = time.time()
+
+    log_file = open("line_follow_log.csv", "w", newline="")
+    log_writer = csv.writer(log_file)
+    log_writer.writerow(["time", "error", "angle"])
+
 
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
@@ -109,30 +111,22 @@ def update():
     global error
     global contour_center
     global lastError
-    global filteredError
-    global lastFilteredError
-    importlib.reload(untitled)
     update_contour()
 
     if contour_center is not None:
-        contour_center_filtered = contour_center[1]
-        error = (contour_center_filtered - untitled.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
-        filteredError = 0.8 * filteredError + 0.2 * error
-
-        angle = (untitled.KP * filteredError) - untitled.ANGLE_OFFSET
-
-        print("P")
-        print(untitled.KP * filteredError)
+        error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
+        dt = rc.get_delta_time()
+        angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
+        #log to csv file
+        elapsed = time.time() - start_time
+        log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle
 
-    lastFilteredError = filteredError
     lastError = error
-    speed = rc_utils.remap_range(abs(angle), 0, 1, 0.6, 0.25, True)
+    speed = 0.9
     rc.drive.set_speed_angle(speed, angle)
-    rc.telemetry.declare_variables("Speed", "Angle", "Error")
-    rc.telemetry.record(speed, angle, error)
     last_angle = angle
 
 
