@@ -29,6 +29,12 @@ error = 0.0
 global lastError
 lastError = error
 
+global alpha
+alpha = 0.3
+
+global filteredError
+filteredError = 0
+
 
 speed = 0.0
 angle = 0.0
@@ -94,7 +100,7 @@ def start():
 
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "angle"])
+    log_writer.writerow(["time", "error", "filtered error", "angle"])
 
 
     rc.drive.set_speed_angle(speed, angle)
@@ -111,20 +117,23 @@ def update():
     global error
     global contour_center
     global lastError
+    global alpha
+    global filteredError
     update_contour()
 
     if contour_center is not None:
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
+        filteredError = alpha * error + (1 - alpha) * filteredError
         dt = rc.get_delta_time()
-        angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
+        angle = (LFC.KP * filteredError) + LFC.KD * ((filteredError - lastError) / dt)
         #log to csv file
         elapsed = time.time() - start_time
-        log_writer.writerow([elapsed, error, angle])
+        log_writer.writerow([elapsed, error, filteredError, angle])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle
 
-    lastError = error
+    lastError = filteredError
     speed = 0.85
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
