@@ -37,15 +37,58 @@ def start():
     rc.set_update_slow_time(0.5)
     rc.drive.set_max_speed(1)
 
-
+def centroid(llist):
+    nn = 0
+    centrx = 0
+    centry = 0
+    for pair in llist:
+        nn += 1
+        centrx += pair[0]
+        centry += pair[1]
+    centrx /= nn
+    centry /= nn
+    return (centrx, centry)
 def update():
    global curScan
+   global lastScan
    curScan = rc.lidar.get_samples()
    theta = 0
+   c1 = []
    for x in curScan:
-    log_writer.writerow([x * math.cos(theta), x * math.sin(theta)])
+    c1.append((x * math.cos(math.radians(theta)), x * math.sin(math.radians(theta))))
     theta += 0.5
+   if lastScan is not None:
+      c2 = []
+      theta = 0
+      for x in lastScan:
+         c2.append((x * math.cos(math.radians(theta)), x * math.sin(math.radians(theta))))
+         theta += 0.5
+      centroidCur = centroid(c1)
+      centroidLast = centroid(c2)
+      dx = centroidCur[0] - centroidLast[0]
+      dy = centroidCur[1] - centroidLast[1]
+      print(f"Pose Change")
+      print(f"Delta X: {dx}")
+      print(f"Delta Y: {dy}")
 
+      c1_np = np.array(c1)
+      c2_np = np.array(c2)
+      c1_centered = c1_np - np.mean(c1_np, axis=0)
+      c2_centered = c2_np - np.mean(c2_np, axis=0)
+
+      H = c2_centered.T @ c1_centered
+
+      U, S, Vt = np.linalg.svd(H)
+
+      R = Vt.T @ U.T
+
+      if np.linalg.det(R) < 0:
+       Vt[-1,:] *= -1
+       R = Vt.T @ U.T
+      rotation = math.atan2(R[1,0], R[0,0])
+
+      print(f"Rotation: {math.degrees(rotation)} degrees")
+   lastScan = curScan
  
 
           
