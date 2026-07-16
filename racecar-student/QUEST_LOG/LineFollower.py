@@ -131,6 +131,8 @@ def update():
 
 
 def update_slow():
+    global angle
+    print(f"Angle: {angle}")
     global maxc
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
