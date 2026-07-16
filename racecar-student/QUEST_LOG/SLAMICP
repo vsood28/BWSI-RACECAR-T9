@@ -1,0 +1,61 @@
+# No external filtering
+
+import sys
+import numpy as np
+
+sys.path.insert(1, '../../library')
+import racecar_core
+import racecar_utils as rc_utils
+import csv
+import time
+import math
+
+log_file = None
+log_writer = None
+start_time = None
+
+
+rc = racecar_core.create_racecar()
+
+global curScan
+curScan = None
+
+global lastScan
+lastScan = curScan
+
+def start():
+    global log_file, log_writer, start_time
+
+    start_time = time.time()
+
+    log_file = open("slam_log.csv", "w", newline="")
+    log_writer = csv.writer(log_file)
+    log_writer.writerow(["X", "Y"])
+
+
+    rc.drive.set_speed_angle(0, 0)
+    rc.set_update_slow_time(0.5)
+    rc.drive.set_max_speed(1)
+
+
+def update():
+   global curScan
+   curScan = rc.lidar.get_samples()
+   theta = 0
+   for x in curScan:
+    log_writer.writerow([x * math.cos(theta), x * math.sin(theta)])
+    theta += 0.5
+
+ 
+
+          
+
+
+def update_slow():
+    pass
+
+
+
+if __name__ == "__main__":
+    rc.set_start_update(start, update, update_slow)
+    rc.go()

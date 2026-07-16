@@ -18,22 +18,16 @@ rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
-MIN_CONTOUR_AREA = 4000 # tune
+MIN_CONTOUR_AREA = 8000 # tune
 
 # check the crop and hsv values
-CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((200, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
 global error
 error = 0.0
 
 global lastError
 lastError = error
-
-global alpha
-alpha = 0.4
-
-global filteredError
-filteredError = 0
 
 
 speed = 0.0
@@ -84,7 +78,7 @@ def update_contour():
         contour_area = 0
         maxc = None
     cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    #rc.display.show_color_image(image)
+    rc.display.show_color_image(image)
 
 
 def start():
@@ -100,7 +94,7 @@ def start():
 
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "filtered error", "angle"])
+    log_writer.writerow(["time", "error", "angle"])
 
 
     rc.drive.set_speed_angle(speed, angle)
@@ -117,34 +111,27 @@ def update():
     global error
     global contour_center
     global lastError
-    global alpha
-    global filteredError
     update_contour()
 
     if contour_center is not None:
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
-        filteredError = alpha * error + (1 - alpha) * filteredError
         dt = rc.get_delta_time()
-        angle = (LFC.KP * filteredError) + LFC.KD * ((filteredError - lastError) / dt)
+        angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
         #log to csv file
         elapsed = time.time() - start_time
-        log_writer.writerow([elapsed, error, filteredError, angle])
+        log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle
 
-    lastError = filteredError
-    speed = 0.85
+    lastError = error
+    speed = 0.9
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
 
 def update_slow():
-    global speed
-    global angle
     global maxc
-    print(f"Speed {speed}")
-    print(f"Angle {angle}")
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
     else:
