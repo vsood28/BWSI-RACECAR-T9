@@ -1,103 +1,101 @@
-# No external filtering
-
 import sys
 import numpy as np
-
-sys.path.insert(1, '../../library')
-import racecar_core
-import racecar_utils as rc_utils
 import csv
 import time
 import math
+import racecar_core
+import racecar_utils as rc_utils
 
 log_file = None
 log_writer = None
 start_time = None
 
-
 rc = racecar_core.create_racecar()
 
-global curScan
-curScan = None
+global last_points
+last_points = None
 
-global lastScan
-lastScan = curScan
+state = [0.0, 0.0, 0.0]
 
 def start():
     global log_file, log_writer, start_time
-
     start_time = time.time()
 
     log_file = open("slam_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["X", "Y"])
-
+    log_writer.writerow(["X", "Y", "Theta"])
 
     rc.drive.set_speed_angle(0, 0)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(1)
+    rc.drive.set_max_speed(1.0)
 
-def centroid(llist):
-    nn = 0
-    centrx = 0
-    centry = 0
-    for pair in llist:
-        nn += 1
-        centrx += pair[0]
-        centry += pair[1]
-    centrx /= nn
-    centry /= nn
-    return (centrx, centry)
+def scan_to_points(scan_data):
+    points = []
+    num_samples = len(scan_data)
+    angle_increment = 360.0 / num_samples
+
+    for i, dist in enumerate(scan_data):
+        if dist < 0.1 or dist > 10.0: 
+            continue
+        
+        angle = math.radians(i * angle_increment)
+        x = dist * math.cos(angle)
+        y = dist * math.sin(angle)
+        points.append([x, y])
+        
+    return np.array(points)
+
 def update():
-   global curScan
-   global lastScan
-   curScan = rc.lidar.get_samples()
-   theta = 0
-   c1 = []
-   for x in curScan:
-    c1.append((x * math.cos(math.radians(theta)), x * math.sin(math.radians(theta))))
-    theta += 0.5
-   if lastScan is not None:
-      c2 = []
-      theta = 0
-      for x in lastScan:
-         c2.append((x * math.cos(math.radians(theta)), x * math.sin(math.radians(theta))))
-         theta += 0.5
-      centroidCur = centroid(c1)
-      centroidLast = centroid(c2)
-      dx = centroidCur[0] - centroidLast[0]
-      dy = centroidCur[1] - centroidLast[1]
-      print(f"Pose Change")
-      print(f"Delta X: {dx}")
-      print(f"Delta Y: {dy}")
+    global last_points, state
+    
+    scan_data = rc.lidar.get_samples()
+    if scan_data is None:
+        return
 
-      c1_np = np.array(c1)
-      c2_np = np.array(c2)
-      c1_centered = c1_np - np.mean(c1_np, axis=0)
-      c2_centered = c2_np - np.mean(c2_np, axis=0)
+    cur_points = scan_to_points(scan_data)
 
-      H = c2_centered.T @ c1_centered
+    if last_points is not None and len(cur_points) > 10 and len(last_points) > 10:
+        min_len = min(len(cur_points), len(last_points))
+        pts1 = cur_points[:min_len]
+        pts2 = last_points[:min_len]
 
-      U, S, Vt = np.linalg.svd(H)
+        centroid1 = np.mean(pts1, axis=0)
+        centroid2 = np.mean(pts2, axis=0)
 
-      R = Vt.T @ U.T
+        pts1_centered = pts1 - centroid1
+        pts2_centered = pts2 - centroid2
 
-      if np.linalg.det(R) < 0:
-       Vt[-1,:] *= -1
-       R = Vt.T @ U.T
-      rotation = math.atan2(R[1,0], R[0,0])
+        H = pts2_centered.T @ pts1_centered
 
-      print(f"Rotation: {math.degrees(rotation)} degrees")
-   lastScan = curScan
- 
+        U, S, Vt = np.linalg.svd(H)
+        R = Vt.T @ U.T
 
-          
+        if np.linalg.det(R) < 0:
+            Vt[-1, :] *= -1
+            R = Vt.T @ U.T
 
+        t = centroid1 - (R @ centroid2)
+
+        rotation_rad = math.atan2(R[1, 0], R[0, 0])
+        rotation_deg = math.degrees(rotation_rad)
+
+        rad_current = math.radians(state[2])
+        global_dx = t[0] * math.cos(rad_current) - t[1] * math.sin(rad_current)
+        global_dy = t[0] * math.sin(rad_current) + t[1] * math.cos(rad_current)
+
+        state[0] += global_dx
+        state[1] += global_dy
+        state[2] = (state[2] + rotation_deg) % 360
+
+        print(f"Pose: X={state[0]:.2f}, Y={state[1]:.2f}, Yaw={state[2]:.2f}°")
+    
+        if log_writer:
+            log_writer.writerow([state[0], state[1], state[2]])
+
+    last_points = cur_points
 
 def update_slow():
     pass
-
-
 
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
