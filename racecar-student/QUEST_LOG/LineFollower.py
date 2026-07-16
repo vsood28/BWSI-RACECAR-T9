@@ -30,7 +30,7 @@ global lastError
 lastError = error
 
 global alpha
-alpha = 0.3
+alpha = 0.4
 
 global filteredError
 filteredError = 0
