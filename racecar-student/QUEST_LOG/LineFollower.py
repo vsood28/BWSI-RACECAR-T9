@@ -131,7 +131,11 @@ def update():
 
 
 def update_slow():
+    global speed
+    global angle
     global maxc
+    print(f"Speed {speed}")
+    print(f"Angle {angle}")
     if rc.camera.get_color_image() is None:
         print("X" * 10 + " (No image) " + "X" * 10)
     else:
