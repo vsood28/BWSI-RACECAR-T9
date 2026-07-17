@@ -18,20 +18,13 @@ rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
-<<<<<<< HEAD
-MIN_CONTOUR_AREA = 3000 # tune the minimum to pick up less reflections
-
-# check the crop and hsv values (change crop here)
-CROP = ((100, 100), (rc.camera.get_height(), rc.camera.get_width()))
-=======
-MIN_CONTOUR_AREA = 5000 # tune
+MIN_CONTOUR_AREA = 3000 # tune
 
 # check the crop and hsv values
 height = rc.camera.get_height()
 width = rc.camera.get_width()
 
-CROP = ((200, 200), (rc.camera.get_height(), rc.camera.get_width()))
->>>>>>> 673890b (pre trial 2 changes)
+CROP = ((250, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -121,7 +114,7 @@ def update():
     global error
     global contour_center
     global lastError
-    update_contour() #offloaded the image processing into a helper function to reduce strain on the pi (faster camera polling)
+    update_contour()
 
     if contour_center is not None:
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
@@ -134,7 +127,7 @@ def update():
         angle = last_angle
 
     lastError = error
-    speed = 0.85
+    speed = 1
     speed *= (1 - abs(error * LFC.SPD_KP))
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
@@ -145,9 +138,11 @@ def update_slow():
     global angle
     global maxc
     global start_time
-    print(f"Speed {speed}") #Print speed and angle in update slow to reduce strain on pi
+    print(f"Speed {speed}")
     print(f"Angle {angle}")
-    print(f"Time: {time.time() - start_time}") #Print time in update slow for better readability during debugging
+    print(f"Time: {time.time() - start_time}")
+    if maxc is not None: 
+        print(f"Contour Area: {cv.contourArea(maxc)}")
 
 
 
