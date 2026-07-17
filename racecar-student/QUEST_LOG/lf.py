@@ -24,7 +24,7 @@ MIN_CONTOUR_AREA = 3000 # tune
 height = rc.camera.get_height()
 width = rc.camera.get_width()
 
-CROP = ((250, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -84,7 +84,7 @@ def update_contour():
             to_draw.append(c)
 
     cv.drawContours(image, to_draw, -1, (255,0,0), 3)   
-    rc.display.show_color_image(image)
+    #rc.display.show_color_image(image)
 
 
 def start():
@@ -96,16 +96,19 @@ def start():
 
     start_time = time.time()
 
+    #logging the data to be displayed in the csv filed and graphed
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
     log_writer.writerow(["time", "error", "angle"])
 
+    
 
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
     rc.drive.set_max_speed(1)
 
-
+global flag
+flag = False
 def update():
     global speed
     global angle
@@ -116,7 +119,13 @@ def update():
     global lastError
     update_contour()
 
+    # Two Stages:
+    # 1. We can see the contour center, so calculate the error 
+    # and log the data. Do regular PD controller.
+    # Else, you use the one time flag system to negate the last angle
+    # and go back on the path.
     if contour_center is not None:
+        flag = False
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
         dt = rc.get_delta_time()
         angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
@@ -124,11 +133,14 @@ def update():
         log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
-        angle = last_angle
+        if flag == False:
+            angle = -last_angle
+            flag = True
+        else:
+            angle = last_angle    
 
     lastError = error
     speed = 1
-    speed *= (1 - abs(error * LFC.SPD_KP))
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
