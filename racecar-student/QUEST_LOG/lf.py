@@ -99,7 +99,7 @@ def start():
     #logging the data to be displayed in the csv filed and graphed
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "angle"])
+    log_writer.writerow(["time", "error", "angle", "proportional", "derivative"])
 
     
 
@@ -131,7 +131,7 @@ def update():
         dt = rc.get_delta_time()
         angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
         elapsed = time.time() - start_time
-        log_writer.writerow([elapsed, error, angle])
+        log_writer.writerow([elapsed, error, angle, LFC.KP * error, LFC.KD * ((error - lastError) / dt)])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle
