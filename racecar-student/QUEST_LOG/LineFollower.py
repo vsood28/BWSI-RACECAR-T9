@@ -21,7 +21,7 @@ maxc = None
 MIN_CONTOUR_AREA = 8000 # tune
 
 # check the crop and hsv values
-CROP = ((200, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((200, 50), (rc.camera.get_height(), rc.camera.get_width()))
 
 global error
 error = 0.0
