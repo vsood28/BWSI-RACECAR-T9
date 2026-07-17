@@ -117,6 +117,7 @@ def update():
     global error
     global contour_center
     global lastError
+    global flag
     update_contour()
 
     # Two Stages:
@@ -133,14 +134,10 @@ def update():
         log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
-        if flag == False:
-            angle = -last_angle
-            flag = True
-        else:
-            angle = last_angle    
+        angle = last_angle
 
     lastError = error
-    speed = 1
+    speed = 0.85
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
