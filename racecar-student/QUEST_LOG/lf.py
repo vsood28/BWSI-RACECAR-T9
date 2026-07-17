@@ -137,7 +137,7 @@ def update():
         angle = last_angle
 
     lastError = error
-    speed = 0.85
+    speed = 0.8
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
