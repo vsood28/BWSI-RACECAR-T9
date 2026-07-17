@@ -11,6 +11,11 @@ with open("line_follow_log.csv") as f:
         time.append(float(row["time"]))
         error.append(float(row["error"]))
         angle.append(float(row["angle"]))
+    idx = 0    
+    for x in angle:
+        angle[idx] = x * 10
+        idx += 1
+
 
 
 plt.plot(time, error, label="Error")

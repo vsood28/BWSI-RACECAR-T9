@@ -31,7 +31,7 @@ def start():
 
     log_file = open("wall_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "angle"])
+    log_writer.writerow(["time", "error", "angle", "proportional", "derivative"])
 
 
 global angle
@@ -57,11 +57,9 @@ def update():
     #print("Derivative")
     #print(WFC.KD * ((error - lastError) / dt))
     elapsed = time.time() - start_time
-    log_writer.writerow([elapsed, error, angle])
+    log_writer.writerow([elapsed, error, angle, error * WFC.KP, ((error - lastError) / dt) * WFC.KD])
     lastError = error
     angle = rc_utils.clamp(angle, -1, 1)
-    rc.telemetry.declare_variables("Angle", "Error")
-    rc.telemetry.record(-angle, error)
     rc.drive.set_max_speed(1)
     rc.drive.set_speed_angle(0.8, -angle)
 
