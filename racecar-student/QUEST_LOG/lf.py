@@ -18,10 +18,10 @@ rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
-MIN_CONTOUR_AREA = 4000 # tune
+MIN_CONTOUR_AREA = 3000 # tune
 
 # check the crop and hsv values
-CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((100, 100), (rc.camera.get_height(), rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -29,19 +29,11 @@ error = 0.0
 global lastError
 lastError = error
 
-global alpha
-alpha = 0.4
-
-global filteredError
-filteredError = 0
-
-
 speed = 0.0
 angle = 0.0
 last_angle = angle
 contour_center = None
 contour_area = 0
-contour_center_filtered = None
 
 
 def update_contour():
@@ -90,17 +82,15 @@ def update_contour():
 def start():
     global speed
     global angle
-    global contour_center_filtered
     global log_file, log_writer, start_time
     speed = 0
     angle = 0
-    contour_center_filtered = None
 
     start_time = time.time()
 
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "filtered error", "angle"])
+    log_writer.writerow(["time", "error", "angle"])
 
 
     rc.drive.set_speed_angle(speed, angle)
@@ -111,32 +101,26 @@ def start():
 def update():
     global speed
     global angle
-    global contour_center_filtered
     global last_angle
     global maxc
     global error
     global contour_center
     global lastError
-    global alpha
-    global filteredError
     update_contour()
 
     if contour_center is not None:
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
-        filteredError = alpha * error + (1 - alpha) * filteredError
         dt = rc.get_delta_time()
-        angle = (LFC.KP * filteredError) + LFC.KD * ((filteredError - lastError) / dt)
-        #log to csv file
+        angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
         elapsed = time.time() - start_time
-        log_writer.writerow([elapsed, error, filteredError, angle])
+        log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
     else:
         angle = last_angle
 
-    lastError = filteredError
+    lastError = error
     speed = 0.85
     speed *= (1 - abs(error * LFC.SPD_KP))
-    print(speed)
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
@@ -145,20 +129,10 @@ def update_slow():
     global speed
     global angle
     global maxc
+    global start_time
     print(f"Speed {speed}")
     print(f"Angle {angle}")
-    if rc.camera.get_color_image() is None:
-        print("X" * 10 + " (No image) " + "X" * 10)
-    else:
-        if contour_center is None:
-            print("-" * 32 + " : area = " + str(contour_area))
-        else:
-            s = ["-"] * 32
-            idx = int(contour_center[1] / 20)
-            if idx >= 32:
-                idx = 31
-            s[idx] = "|"
-            print("".join(s) + " : area = " + str(contour_area))
+    print(f"Time: {time.time() - start_time}")
 
 
 
