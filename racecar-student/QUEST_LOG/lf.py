@@ -18,10 +18,20 @@ rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
+<<<<<<< HEAD
 MIN_CONTOUR_AREA = 3000 # tune the minimum to pick up less reflections
 
 # check the crop and hsv values (change crop here)
 CROP = ((100, 100), (rc.camera.get_height(), rc.camera.get_width()))
+=======
+MIN_CONTOUR_AREA = 5000 # tune
+
+# check the crop and hsv values
+height = rc.camera.get_height()
+width = rc.camera.get_width()
+
+CROP = ((200, 200), (rc.camera.get_height(), rc.camera.get_width()))
+>>>>>>> 673890b (pre trial 2 changes)
 
 global error
 error = 0.0
@@ -74,9 +84,14 @@ def update_contour():
     else:
         contour_center = None
         contour_area = 0
-        maxc = None
-    cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    #rc.display.show_color_image(image)
+        maxc = None  
+    to_draw = []
+    for c in blue_contours:
+        if cv.contourArea(c) > MIN_CONTOUR_AREA:
+            to_draw.append(c)
+
+    cv.drawContours(image, to_draw, -1, (255,0,0), 3)   
+    rc.display.show_color_image(image)
 
 
 def start():
