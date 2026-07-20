@@ -26,10 +26,8 @@ class ExtendedKalmanFilter:
 
         self.kalman_gain = None
 
-        self.change_in_predicted_state = np.zeros(3) #accumulate imu steps, while waiting for lidar input
-
     def predict_state(self, control_input, delta_t, **kwargs): #encoder update
-        self.change_in_predicted_state += self.state_model(self.state_estimate, control_input) #update predicted state
+        self.state_estimate += self.state_model(self.state_estimate, control_input, delta_t, **kwargs) #update predicted state
 
         F = self.state_transistion_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
         P = self.state_estimation_covariance
@@ -50,8 +48,8 @@ class ExtendedKalmanFilter:
         S = H @ P @ H.T + R #innovation covariance: basically, hpht is uncertainty of state translated into uncertainty of measurement, R, is uncertainty due to sensor noise, sum is "measurement error" (not exactly, close enough)
         self.kalman_gain = P @ H.T @ np.linalg.inv(S) # pht translates from "how wrong is my measurement" (innovation, or S) to how states are affeced by how wrong the measruement is
 
-        self.state_estimate += self.kalman_gain * innovation
+        self.state_estimate += self.kalman_gain @ innovation
 
-        L = (I - self.kalman_gain @ innovation)
+        L = (I - self.kalman_gain @ H)
 
         self.state_estimation_covariance = L @ self.state_estimation_covariance @ L.T + self.kalman_gain @ R @ self.kalman_gain.T #joseph form
