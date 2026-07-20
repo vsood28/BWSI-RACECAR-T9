@@ -1,6 +1,6 @@
 import sys
 
-sys.path.insert(0, '../../library')
+sys.path.insert(1, '../../library')
 
 import racecar_core
 import cv2 as cv
