@@ -49,4 +49,4 @@ def state_model(state_estimate, control_input, delta_t, **kwargs):
     ])
 
 def measurement_model(state_estimate, delta_time, **kwargs): #maps state to predicted measurement
-    return state_estimate
+    return state_estimate[:3]
