@@ -12,3 +12,7 @@ ANGLE_OFFSET = 0
 SPEED = 0.3
 
 SPD_KP = 0.001
+
+Kp = 0.002
+
+Kd = 0.00

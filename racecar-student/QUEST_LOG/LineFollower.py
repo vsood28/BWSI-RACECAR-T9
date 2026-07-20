@@ -1,101 +1,74 @@
 import sys
+import csv
+import time
+
 import cv2 as cv
-import numpy as np
 
 sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
 import LFC
-import csv
-import time
 
+rc = racecar_core.create_racecar()
+
+MIN_CONTOUR_AREA = 3000
+CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+
+SPEED = 0.8   # lower to ~0.4 while tuning Kp/Kd, then raise
+
+# ------------------------------ state -------------------------------------
 log_file = None
 log_writer = None
 start_time = None
 
-
-rc = racecar_core.create_racecar()
-
-global maxc # max contour area of blue mask
 maxc = None
-MIN_CONTOUR_AREA = 8000 # tune
-
-# check the crop and hsv values
-CROP = ((200, 50), (rc.camera.get_height(), rc.camera.get_width()))
-
-global error
-error = 0.0
-
-global lastError
-lastError = error
-
-
-speed = 0.0
-angle = 0.0
-last_angle = angle
 contour_center = None
 contour_area = 0
-contour_center_filtered = None
+error = 0.0
+lastError = 0.0
+angle = 0.0
+last_angle = 0.0
+speed = 0.0
 
 
 def update_contour():
-    global maxc
-    global contour_center
-    global contour_area
+    global maxc, contour_center, contour_area
 
     image = rc.camera.get_color_image()
-
     if image is None:
-        contour_center = None
-        contour_area = 0
+        contour_center, contour_area, maxc = None, 0, None
         return
 
     image = rc_utils.crop(image, CROP[0], CROP[1])
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     blue_mask = cv.inRange(hsv, LFC.BLUE[0], LFC.BLUE[1])
-    blue_contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-    
-    # precondition: called
-    # postconditon: returns the largest contour from the set it is called with
-    def get_largest(contours):
-        max_c = None
-        max_area = 0
-        for c in contours:
-            area = cv.contourArea(c)
-            if area > max_area and area > MIN_CONTOUR_AREA:
-                max_area = area
-                max_c = c
-        return max_c, max_area
+    contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
-    bluemax, bluearea = get_largest(blue_contours)
-
-    if bluemax is not None: # sets the maximum contour and it's area if it exists
-        contour_center = rc_utils.get_contour_center(bluemax)
-        contour_area = bluearea
-        maxc = bluemax 
+    largest = rc_utils.get_largest_contour(contours, MIN_CONTOUR_AREA)
+    if largest is not None:
+        contour_center = rc_utils.get_contour_center(largest)
+        contour_area = cv.contourArea(largest)
+        maxc = largest
+        cv.drawContours(image, [largest], -1, (255, 0, 0), 3)
     else:
-        contour_center = None
-        contour_area = 0
-        maxc = None
-    cv.drawContours(image, blue_contours, -1, (255,0,0), 3)   
-    rc.display.show_color_image(image)
+        contour_center, contour_area, maxc = None, 0, None
+
+    # rc.display.show_color_image(image)   # uncomment to see the mask; adds camera lag
 
 
 def start():
-    global speed
-    global angle
-    global contour_center_filtered
+    global speed, angle, lastError, last_angle
     global log_file, log_writer, start_time
+
     speed = 0
     angle = 0
-    contour_center_filtered = None
-
+    lastError = 0.0
+    last_angle = 0.0
     start_time = time.time()
 
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "angle"])
-
+    log_writer.writerow(["time", "error", "angle", "proportional", "derivative"])
 
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
@@ -103,50 +76,40 @@ def start():
 
 
 def update():
-    global speed
-    global angle
-    global contour_center_filtered
-    global last_angle
-    global maxc
-    global error
-    global contour_center
-    global lastError
+    global speed, angle, last_angle, error, lastError
+
     update_contour()
 
     if contour_center is not None:
         error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
         dt = rc.get_delta_time()
-        angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
-        #log to csv file
-        elapsed = time.time() - start_time
-        log_writer.writerow([elapsed, error, angle])
-        angle = rc_utils.clamp(angle, -1, 1)
+        deriv = (error - lastError) / dt if dt > 0 else 0.0
+        p_term = LFC.Kp * error
+        d_term = LFC.Kd * deriv
+        angle = rc_utils.clamp(p_term + d_term, -1, 1)
+        lastError = error
     else:
+      
         angle = last_angle
+        p_term, d_term = 0.0, 0.0
 
-    lastError = error
-    speed = 0.9
+    # Log every frame (including lost-line frames) 
+    log_writer.writerow([time.time() - start_time, error, angle, p_term, d_term])
+    log_file.flush()
+
+    speed = SPEED
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
 
 def update_slow():
-    global angle
-    print(f"Angle: {angle}")
-    global maxc
-    if rc.camera.get_color_image() is None:
-        print("X" * 10 + " (No image) " + "X" * 10)
+   
+    print("Speed {:.2f}   Angle {:+.2f}   Error {:+.1f}   Time {:.1f}".format(
+        speed, angle, error, time.time() - start_time))
+    if maxc is not None:
+        print("Contour area: {}".format(int(cv.contourArea(maxc))))
     else:
-        if contour_center is None:
-            print("-" * 32 + " : area = " + str(contour_area))
-        else:
-            s = ["-"] * 32
-            idx = int(contour_center[1] / 20)
-            if idx >= 32:
-                idx = 31
-            s[idx] = "|"
-            print("".join(s) + " : area = " + str(contour_area))
-
+        print("No line found")
 
 
 if __name__ == "__main__":

@@ -36,28 +36,31 @@ def start():
 
 global angle
 angle = 0.0
-speed = 0.8 #constant for speed to easily adjust
 def update():
     global kP, kD, lastError, angle
 
-    importlib.reload(WFC) #import variables from a config file so that they can be changed without restarting the program
+    importlib.reload(WFC)
     scan = rc.lidar.get_samples()
 
+    #implement normalization condition.
     #get left and right lidar scans with average distances
     right_dist = rc_utils.get_lidar_average_distance(scan, 60, 20)
     left_dist = rc_utils.get_lidar_average_distance(scan, 300, 20)
 
-    error = (left_dist - right_dist) # error is how far we are from center
+    error = (left_dist - right_dist)
 
     dt = rc.get_delta_time()
 
     angle = WFC.KP * error + WFC.KD * (error - lastError) / dt
+    print(f"Proportional term: {WFC.KP * error},   Derivative term: {WFC.KD * (error - lastError) / dt}")
+   
+
     elapsed = time.time() - start_time
     log_writer.writerow([elapsed, error, angle, error * WFC.KP, ((error - lastError) / dt) * WFC.KD])
     lastError = error
-    angle = rc_utils.clamp(angle, -1, 1) #clamp angle so we don't return errors
+    angle = rc_utils.clamp(angle, -1, 1)
     rc.drive.set_max_speed(1)
-    rc.drive.set_speed_angle(0.85, -angle)
+    rc.drive.set_speed_angle(0.8, -angle)
 
 
 def update_slow():
@@ -70,4 +73,8 @@ def update_slow():
 
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
-    rc.go()
+    try:
+        rc.go()
+    finally:
+        if log_file is not None:
+            log_file.close()
