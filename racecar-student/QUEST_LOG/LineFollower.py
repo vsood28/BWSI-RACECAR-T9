@@ -38,6 +38,12 @@ contour_area = 0
 contour_center_filtered = None
 
 
+def avarage_filter(new_value, step):
+    for x in new_value:
+        x
+
+       
+
 def update_contour():
     global maxc
     global contour_center
