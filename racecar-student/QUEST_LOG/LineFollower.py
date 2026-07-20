@@ -14,7 +14,7 @@ rc = racecar_core.create_racecar()
 MIN_CONTOUR_AREA = 3000
 CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
-SPEED = 0.8   # lower to ~0.4 while tuning Kp/Kd, then raise
+SPEED = 0.8
 
 # ------------------------------ state -------------------------------------
 log_file = None
