@@ -52,10 +52,9 @@ def update():
     dt = rc.get_delta_time()
 
     angle = WFC.KP * error + WFC.KD * (error - lastError) / dt
-    #print("Proportional")
-    #print(WFC.KP * error)
-    #print("Derivative")
-    #print(WFC.KD * ((error - lastError) / dt))
+    print(f"Proportional term: {WFC.KP * error},   Derivative term: {WFC.KD * (error - lastError) / dt}")
+   
+
     elapsed = time.time() - start_time
     log_writer.writerow([elapsed, error, angle, error * WFC.KP, ((error - lastError) / dt) * WFC.KD])
     lastError = error
