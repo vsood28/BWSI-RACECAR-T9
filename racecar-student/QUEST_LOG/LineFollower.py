@@ -14,8 +14,7 @@ rc = racecar_core.create_racecar()
 MIN_CONTOUR_AREA = 3000
 CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
-SPEED = 0.8   # lower to ~0.4 while tuning Kp/Kd, then raise
-
+SPEED = 0.8   
 # ------------------------------ state -------------------------------------
 log_file = None
 log_writer = None
@@ -68,7 +67,7 @@ def start():
 
     log_file = open("line_follow_log.csv", "w", newline="")
     log_writer = csv.writer(log_file)
-    log_writer.writerow(["time", "error", "angle", "proportional", "derivative"])
+    log_writer.writerow(["time", "error", "angle_raw", "angle_cmd", "p", "d", "found"])
 
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
@@ -86,15 +85,16 @@ def update():
         deriv = (error - lastError) / dt if dt > 0 else 0.0
         p_term = LFC.Kp * error
         d_term = LFC.Kd * deriv
-        angle = rc_utils.clamp(p_term + d_term, -1, 1)
+        angle_raw = p_term + d_term          # before clamp -> shows saturation
+        angle = rc_utils.clamp(angle_raw, -1, 1)
         lastError = error
+        found = 1
     else:
-      
         angle = last_angle
-        p_term, d_term = 0.0, 0.0
+        p_term, d_term, angle_raw = 0.0, 0.0, last_angle
+        found = 0
 
-    # Log every frame (including lost-line frames) 
-    log_writer.writerow([time.time() - start_time, error, angle, p_term, d_term])
+    log_writer.writerow([time.time() - start_time, error, angle_raw, angle, p_term, d_term, found])
     log_file.flush()
 
     speed = SPEED
