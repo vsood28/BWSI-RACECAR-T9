@@ -89,11 +89,11 @@ def update():
         angle = rc_utils.clamp(p_term + d_term, -1, 1)
         lastError = error
     else:
-        # Line lost: hold last steering command.
+      
         angle = last_angle
         p_term, d_term = 0.0, 0.0
 
-    # Log every frame (including lost-line frames) so gaps don't get interpolated.
+    # Log every frame (including lost-line frames) 
     log_writer.writerow([time.time() - start_time, error, angle, p_term, d_term])
     log_file.flush()
 
@@ -103,7 +103,7 @@ def update():
 
 
 def update_slow():
-    # The added error line -- see the signal you're tuning against, live.
+   
     print("Speed {:.2f}   Angle {:+.2f}   Error {:+.1f}   Time {:.1f}".format(
         speed, angle, error, time.time() - start_time))
     if maxc is not None:
