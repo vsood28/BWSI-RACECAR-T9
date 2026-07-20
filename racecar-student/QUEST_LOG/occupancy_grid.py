@@ -75,6 +75,12 @@ class OccupancyGrid:
             x, y = cell
             self.grid[x][y] = bayesian_update(self.grid[x][y], self.prob_occ_hit, self.prior_odds)
 
+    def world_to_grid(self, x, y):
+        return x // self.resolution, y // self.resolution
+    
+    def grid_to_world(self, x, y):
+        return x * self.resolution, y * self.resolution
+
     def get_odds(self, x, y):
         return recover_probability(self.grid[x // self.resolution][y // self.resolution]) #world coord to grid coord
         
