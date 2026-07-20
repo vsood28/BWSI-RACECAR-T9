@@ -32,11 +32,60 @@ error = 0.0
 global lastError
 lastError = error
 
+global maxCP
+global contour_centerP
+global contour_areaP
+
+maxCP = None
+contour_centerP = None
+contour_areaP = 0.0
+
 speed = 0.0
 angle = 0.0
 last_angle = angle
 contour_center = None
 contour_area = 0
+
+def update_pink_contour():
+    global maxCP
+    global contour_centerP
+    global contour_areaP
+
+    image = rc.camera.get_color_image()
+
+    if image is None:
+        contour_centerP = None
+        contour_areaP = 0
+        return
+
+    image = rc_utils.crop(image, CROP[0], CROP[1])
+    hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+    pink_mask = cv.inRange(hsv, LFC.PINK[0], LFC.PINK[1])
+    pink_contours, _ = cv.findContours(pink_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    
+    # precondition: called
+    # postconditon: returns the largest contour from the set it is called with
+    def get_largest(contours):
+        max_c = None
+        max_area = 0
+        for c in contours:
+            area = cv.contourArea(c)
+            if area > max_area and area > 500:
+                max_area = area
+                max_c = c
+        return max_c, max_area
+
+    pinkmax, pinkarea = get_largest(pink_contours)
+
+    if pinkmax is not None: # sets the maximum contour and it's area if it exists
+        contour_center = rc_utils.get_contour_center(pinkmax)
+        contour_area = pinkarea
+        maxc = pinkmax 
+    else:
+        contour_center = None
+        contour_area = 0
+        maxCP = None  
+
 
 
 def update_contour():
