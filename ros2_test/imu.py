@@ -4,11 +4,10 @@ import rclpy
 from rclpy.node import Node  
 
 from geometry_msgs.msg import Pose2D, Vector3
-from sensor_msgs.msg import Imu, MagneticField # does magneticfield work like this ?
+from sensor_msgs.msg import Imu, MagneticField # does magnetometer work like this ?
 from std_msgs.msg import Float32
 
 import filters
-import math
 import time
 
 ### Classes ###
@@ -19,7 +18,7 @@ class ImuNode(Node):
     def __init__(self):
         super().__init__('imu_publisher_node')
         
-        # is this right
+        # is this the right hz
         self.declare_parameter('pubilsh_rate_hz', 60.0)
 
         # create_publisher parameters: msg type (Class), topic (str), quality (10)
@@ -27,12 +26,12 @@ class ImuNode(Node):
         self.__velocity_pub = self.create_publisher(Float32, '/velocity', 10)
         self.__pose_est_pub = self.create_publisher(Pose2D, '/pose_estimate', 10)
 
-        # messages to publish
+        # initializing / type of messages to publish
         self.__attitude_message = Vector3()
         self.__velocity_message = Float32()
         self.__pose_est_message = Pose2D()
 
-        # Filters and extra useful variables ??     + usage on right side
+        # Filters and extra useful variables ?? + usages
         self.kf1_velocity = filters.KalmanFilter() # linear velocity
         self.kf2_posx = filters.KalmanFilter() # position (x)
         self.kf3_posz = filters.KalmanFilter() # position (y)
@@ -57,7 +56,8 @@ class ImuNode(Node):
         self.my = 0.0
         self.mz = 0.0
 
-        # create_subscription parameters: msg_type, topic, callback, qos_profile
+        # create_subscription parameters: 
+        # msg_type (Class), topic (str), callback (function), qos_profile (quality: int)
         self.create_subscription(Imu, '/imu/fused', self.imu_fused_callback, 10)
         self.create_subscription(MagneticField, '/mag', self.mag_callback, 10)
 
@@ -69,7 +69,8 @@ class ImuNode(Node):
 
         # integrating acceleration values
         self.velocity_x = self.velocity_x + data.linear_acceleration.x * self.dt
-        # self.velocity_y = self.velocity_y + data.linear_acceleration.y * self.dt # y should technically be equal to zero - maybe ignorable?
+        # self.velocity_y = self.velocity_y + data.linear_acceleration.y * self.dt 
+        # # y should technically be equal to zero - maybe ignorable?
         self.velocity_z = self.velocity_z + data.linear_acceleration.z * self.dt
 
         # combines velocity into a scalar 
@@ -90,7 +91,8 @@ class ImuNode(Node):
         self.yaw = self.yaw + data.angular_velocity.z * self.dt
 
         # passing values into a complementary filter 
-        self.compf1_att.__init__(self, 0.95, self.roll, self.pitch, self.yaw) # alpha value: trust to put into gyroscope
+        # alpha value: trust to put into gyroscope
+        self.compf1_att.__init__(self, 0.95, self.roll, self.pitch, self.yaw)
         at_x, at_y, at_z, _ = self.compf1_att.update(self, 
                            data.linear_acceleration.x, data.linear_acceleration.y, data.linear_acceleration.z, 
                            data.angular_velocity.x, data.angular_velocity.y, data.angular_velocity.z,
@@ -116,11 +118,12 @@ class ImuNode(Node):
         self.kf3_posz.__init__(self, 0, 0)
 
         # passing theta into complementary filter
-        self.compf2_theta.__init__(self, 0.95, None, None, None) # alpha value: trust to put into gyroscope
+        # alpha value: trust to put into gyroscope
+        self.compf2_theta.__init__(self, 0.95, None, None, None)
         _, _, _, final_theta = self.compf1_att.update(self, 
-                           None, None, None,
-                           None, None, None,
-                           self.mz, self.mx)
+                                            None, None, None,
+                                            None, None, None,
+                                            self.mz, self.mx)
 
         # assigning various values to message data
         self.__pose_est_message.data.x = self.kf2_velocity.update(self, self.position_x)
