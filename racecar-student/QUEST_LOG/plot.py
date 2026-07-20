@@ -7,7 +7,7 @@ angle = []
 prop = []
 deriv = []
 
-with open("line_follow_log.csv") as f:
+with open("wall_follow_log.csv") as f:
     reader = csv.DictReader(f)
     for row in reader:
         time.append(float(row["time"]))
