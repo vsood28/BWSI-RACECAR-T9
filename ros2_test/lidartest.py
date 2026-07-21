@@ -25,29 +25,13 @@ class WallFollower(Node):
 
         self.node.create_timer(self.__PUBLISH_PERIOD_SEC, self.__update)
 
-        self.create_subscription(Vector3, '/attitude', self.attitude_callback, 10) # print
-        self.create_subscription(Float32, '/velocity', self.velocity_callback, 10) # print
-        # ^ ask sixian for stupid implementation | use for turning speed controller
-        self.create_subscription(Pose, '/pose_estimate', self.pose_callback, 10) # print
-
         self.__lidar_sub = self.create_subscription(LaserScan, self.__SCAN_TOPIC, self.__scan_callback, 10)
 
-        # self.cur_attitude = None
-        # self.cur_velocity = None
-        # self.cur_pose = None
 
     def __scan_callback(self, data):
         scan_data = np.flip(np.multiply(np.array(data.ranges), 100))
         self.__samples = np.array([0 if str(x) == "inf" else x for x in scan_data])
 
-    def __attitude_callback(self, data):
-        pass
-    
-    def __velocity_callback(self, data):
-        pass
-
-    def __pose_callback(self, data):
-        pass
 
     def set_speed_angle(self, speed: float, angle: float) -> None:
         assert (

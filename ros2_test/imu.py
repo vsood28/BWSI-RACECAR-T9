@@ -40,7 +40,7 @@ class ImuNode(Node):
         self.compf2_theta = filters.ComplementaryFilter() # theta
 
         # do these get initialized here or in callback
-        self.dt = 0.0 # is this initialized with 0 because it should be an integer
+        self.old_time = 0.0
 
         self.velocity_x = 0.0 
         self.velocity_z = 0.0
@@ -63,15 +63,21 @@ class ImuNode(Node):
 
 
     def imu_fused_callback(self, data): # called every time something is published
-        self.dt = time.time() - self.dt # dt for all integration
+        if self.old_time == 0.0:
+            self.old_time = time.time()
+            return
+
+        new_time = time.time()
+        dt = new_time - self.old_time # dt for all integration
+        self.old_time = new_time
         
         ########################## LINEAR VELOCITY ##########################
 
         # integrating acceleration values
-        self.velocity_x = self.velocity_x + data.linear_acceleration.x * self.dt
-        # self.velocity_y = self.velocity_y + data.linear_acceleration.y * self.dt 
+        self.velocity_x = self.velocity_x + data.linear_acceleration.x * dt
+        # self.velocity_y = self.velocity_y + data.linear_acceleration.y * dt 
         # # y should technically be equal to zero - maybe ignorable?
-        self.velocity_z = self.velocity_z + data.linear_acceleration.z * self.dt
+        self.velocity_z = self.velocity_z + data.linear_acceleration.z * dt
 
         # combines velocity into a scalar 
         self.velocity_scalar = self.velocity_x ** 2 + self.velocity_z ** 2
@@ -86,9 +92,9 @@ class ImuNode(Node):
         ############################## ATTITUDE ###############################
 
         # integrating angular velocity values
-        self.roll = self.roll + data.angular_velocity.x * self.dt
-        self.pitch = self.pitch + data.angular_velocity.y * self.dt
-        self.yaw = self.yaw + data.angular_velocity.z * self.dt
+        self.roll = self.roll + data.angular_velocity.x * dt
+        self.pitch = self.pitch + data.angular_velocity.y * dt
+        self.yaw = self.yaw + data.angular_velocity.z * dt
 
         # passing values into a complementary filter 
         # alpha value: trust to put into gyroscope
@@ -96,7 +102,7 @@ class ImuNode(Node):
         at_x, at_y, at_z, _ = self.compf1_att.update(self, 
                            data.linear_acceleration.x, data.linear_acceleration.y, data.linear_acceleration.z, 
                            data.angular_velocity.x, data.angular_velocity.y, data.angular_velocity.z,
-                           None, None)
+                           None, None, dt)
     
         # taking the values out of complementary filter and assigning them to the message data
         self.__attitude_message.x = at_x
@@ -110,8 +116,8 @@ class ImuNode(Node):
         # x,y = x,z because y has the gravity acceleration in it for some reason
         
         # integrating linear velocity values
-        self.position_x = self.position_x + self.velocity_x * self.dt
-        self.position_z = self.position_z + self.velocity_z * self.dt
+        self.position_x = self.position_x + self.velocity_x * dt
+        self.position_z = self.position_z + self.velocity_z * dt
 
         # passing x and z into kalman filters
         self.kf2_posx.__init__(self, 0, 0)
@@ -123,7 +129,7 @@ class ImuNode(Node):
         _, _, _, final_theta = self.compf1_att.update(self, 
                                             None, None, None,
                                             None, None, None,
-                                            self.mz, self.mx)
+                                            self.mz, self.mx, dt)
 
         # assigning various values to message data
         self.__pose_est_message.data.x = self.kf2_velocity.update(self, self.position_x)
