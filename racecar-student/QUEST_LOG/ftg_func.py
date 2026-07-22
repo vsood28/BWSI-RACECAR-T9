@@ -1,4 +1,4 @@
-
+import math
 def largest_gap(lidar):
     smp = lidar.get_samples()
     n = lidar.get_num_samples()
