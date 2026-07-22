@@ -14,7 +14,12 @@ rc = racecar_core.create_racecar()
 MIN_CONTOUR_AREA = 3000
 CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
+<<<<<<< HEAD
 SPEED = 0.8   
+=======
+SPEED = 0.8
+
+>>>>>>> c4d10e5fdbb934c08b93c38bc38cf3c6afe98a90
 # ------------------------------ state -------------------------------------
 log_file = None
 log_writer = None
