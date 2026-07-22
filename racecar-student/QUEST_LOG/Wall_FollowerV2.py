@@ -43,7 +43,7 @@ def update():
 
     dt = rc.get_delta_time()
 
-    angle = KP * error + KD * (error - lastError) / dt
+    angle = KP * error + KD * ((error - lastError) / dt)
    
     lastError = error
     angle = rc_utils.clamp(angle, -1, 1)
