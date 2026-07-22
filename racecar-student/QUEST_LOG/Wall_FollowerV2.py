@@ -17,8 +17,8 @@ rc = racecar_core.create_racecar()
 global lastError
 lastError = 0
 
-KP = 0.00185
-KD = 0.02
+KP = 0.06
+KD = 0.0
 
 def start():
     global lastError
@@ -57,7 +57,7 @@ def update_slow():
     global error
     elapsed = time.time() - start_time
     print(f"Elapsed: {elapsed}")
-    print(f"Angle: {angle}")
+    print(f"car Angle: {angle}")
     print(f"Error: {error}")
 
 

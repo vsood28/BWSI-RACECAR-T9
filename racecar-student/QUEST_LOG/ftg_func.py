@@ -23,9 +23,11 @@ def largest_gap(lidar):
         if d > max_dist:
             max_dist = d
             max_i = (i - 1, i)
-
-    return pts[max_i[0]], pts[max_i[1]]
+    if len(pts) == 0:
+        return 0,0
+    else:
+        return pts[max_i[0]], pts[max_i[1]]
 
 def angle_to(window):
     pt = ((window[0][0] + window[1][0])/2, window[0][1] + window[1][1]/2)
-    return math.atan2(pt[1], pt[2])
+    return math.atan2(pt[0], pt[1])
