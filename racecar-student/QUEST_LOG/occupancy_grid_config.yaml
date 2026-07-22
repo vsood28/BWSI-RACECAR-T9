@@ -1,0 +1,6 @@
+width: 6
+height: 16
+resolution: 1
+prior_odds: 0.5
+occupied_prob_hit: 0.7
+occupied_prob_miss: 0.3
