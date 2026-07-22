@@ -1,16 +1,6 @@
-import sys
 import numpy as np
-import csv
-import time
 import math
-import racecar_core
-import racecar_utils as rc_utils
 
-log_file = None
-log_writer = None
-start_time = None
-
-rc = racecar_core.create_racecar()
 
 last_points = None
 last_transform = None
@@ -21,19 +11,6 @@ ICP_MAX_ITERS = 25
 ICP_TOLERANCE = 1e-5
 ICP_MAX_CORR_DIST = 0.5
 ICP_MIN_MATCHES = 10
-
-
-def start():
-    global log_file, log_writer, start_time
-    start_time = time.time()
-
-    log_file = open("slam_log.csv", "w", newline="")
-    log_writer = csv.writer(log_file)
-    log_writer.writerow(["X", "Y", "Theta"])
-
-    rc.drive.set_speed_angle(0, 0)
-    rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(1.0)
 
 
 def scan_to_points(scan_data):
@@ -124,10 +101,9 @@ def icp(source, target, init_R=None, init_t=None):
     return R_total, t_total, mean_error, iters_run
 
 
-def update():
+def update(scan_data):
     global last_points, last_transform, state
 
-    scan_data = rc.lidar.get_samples()
     if scan_data is None:
         return
 
@@ -160,19 +136,12 @@ def update():
             f"Pose: X={state[0]:.2f}, Y={state[1]:.2f}, Yaw={state[2]:.2f}\u00b0  "
             f"(ICP: {iters_run} iters, mean_err={mean_error:.4f} m)"
         )
-
-        if log_writer:
-            log_writer.writerow([state[0], state[1], state[2]])
     else:
         last_transform = None
 
     last_points = cur_points
 
+def get_pose():
+    global state
+    return state
 
-def update_slow():
-    pass
-
-
-if __name__ == "__main__":
-    rc.set_start_update(start, update, update_slow)
-    rc.go()
