@@ -23,6 +23,7 @@ class WallFollower(Node):
         self.__message.header.frame_id = self.__FRAME_ID
         self.__max_speed = 0.50
 
+        # make sure to initialize variables
         self.node.create_timer(self.__PUBLISH_PERIOD_SEC, self.__update)
 
         self.create_subscription(Vector3, '/attitude', self.attitude_callback, 10) # print
