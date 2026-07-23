@@ -60,6 +60,10 @@ class Follower:
     def get_pose():
         global pose
         return pose    
+    def generate_Path(endPose):
+        global oc
+        global pose
+        return AStarAlgorithm.astar(oc, pose, endPose)
         
         
         

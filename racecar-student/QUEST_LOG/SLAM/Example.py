@@ -34,7 +34,9 @@ def update():
     print(f"X: {pose[0]}")
     print(f"Y: {pose[1]}")
     print(f"Theta: {pose[2]}")
-    
+    path = follower.generatePath([0,0,0])
+    follower.followPath(path)
+
     
 
 
