@@ -140,6 +140,7 @@ def update(scan_data):
         last_transform = None
 
     last_points = cur_points
+    return global_dx, global_dy, rotation_deg % 360
 
 def get_pose():
     global state
