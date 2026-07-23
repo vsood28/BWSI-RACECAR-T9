@@ -1,7 +1,4 @@
 import time
-
-
-
 import sys
 import math
 sys.path.insert(1, '../../library')
@@ -9,8 +6,6 @@ sys.path.insert(1, '../../library')
 import racecar_core
 import racecar_utils as rc_utils
 import time
-
-
 
 start_time = None
 
@@ -52,7 +47,7 @@ angle = 0.0
 global error
 error = 0.0
 
-KP = 0.03
+KP = 0.01
 KD = 0.0
 
 KPS = 0.002
@@ -60,7 +55,7 @@ KDS = 0
 
 SPEED_BASELINE = 300
 
-ZERO_THRESHOLD = 7
+ZERO_THRESHOLD = 5
 
 steering_pid = PID(kP=KP, kD=KD)
 speed_pid = PID(kP=KPS, kD=KDS)
@@ -128,11 +123,12 @@ def largest_ray(scan):
     angle = best_idx * 360 / n
     if angle > 180:
         angle -= 360
+    print(f"Target Angle: {angle}")    
     return angle    
 
 def largest_window(scan):
     n = len(scan)
-    win = [-n//3, -n//3]
+    win = None
     largest_win = [0, 0]
     for i in range(-n//4, n//4):
         if scan[i] == 0: #if zeros
@@ -145,6 +141,9 @@ def largest_window(scan):
                 if win[1] - win[0] >= largest_win[1] - largest_win[0]: #if winodw greater
                     largest_win = win #update largest
                 win = None
+    if win is not None:
+        if win[1] - win[0] >= largest_win[1] - largest_win[0]:
+            largest_win = win            
     print(f"Largest Win: {largest_win}")            
     best_idx = (largest_win[0] + largest_win[1]) // 2 #index center
     angle = best_idx * 360 / n
