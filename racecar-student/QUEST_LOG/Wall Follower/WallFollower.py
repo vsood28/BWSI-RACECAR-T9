@@ -44,8 +44,8 @@ def update():
 
     #implement normalization condition.
     #get left and right lidar scans with average distances
-    right_dist = rc_utils.get_lidar_average_distance(scan, 60, 20)
-    left_dist = rc_utils.get_lidar_average_distance(scan, 300, 20)
+    right_dist = rc_utils.get_lidar_average_distance(scan, 50, 20)
+    left_dist = rc_utils.get_lidar_average_distance(scan, 310, 20)
 
     error = (left_dist - right_dist)
 
