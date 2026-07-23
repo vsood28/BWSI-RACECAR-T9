@@ -51,13 +51,15 @@ angle = 0.0
 global error
 error = 0.0
 
-KP = 1
+KP = 0.1
 KD = 0.0
 
 KPS = 0.002
 KDS = 0
 
 SPEED_BASELINE = 300
+
+ZERO_THRESHOLD = 7
 
 steering_pid = PID(kP=KP, kD=KD)
 speed_pid = PID(kP=KPS, kD=KDS)
@@ -78,11 +80,14 @@ def start():
 def update():
     global angle, error, speed
 
-    index = largest_ray(rc.lidar)
+    index = largest_ray(rc.lidar.get_samples())
+
     n = rc.lidar.get_num_samples()
 
-    error = 360 * (index / n)
-
+    error = index * 360 / n
+    if error > 180:
+        error -= 360
+    #CHECK ANGLE SIGN
     angle = steering_pid.tick(0, error)
 
     angle = rc_utils.clamp(angle, -1, 1)
@@ -93,20 +98,33 @@ def update():
     speed = rc_utils.clamp(speed, 0.1, 1) #dont stop (believin')
     rc.drive.set_max_speed(1)
     rc.drive.set_speed_angle(speed, angle)
+    
 
 def largest_ray(scan):
-    largest_dist = 0
-    idx = 0
-    cur_idx = 0
-    for i in range(len(scan)):
-        val = scan[i]
-        if val == 0:
-            val = math.inf
-        if val > largest_dist:
-            largest_dist = val   
-            idx = cur_idx 
-        cur_idx += 1
-    return idx    
+    n = len(scan)
+
+    largest_dist = -1
+    best_idx = 0
+
+    for i in range(n // 4):
+        dist = scan[i]
+        if dist == 0:
+            dist = math.inf
+
+        if dist > largest_dist:
+            largest_dist = dist
+            best_idx = i
+
+    for i in range(3 * n // 4, n):
+        dist = scan[i]
+        if dist == 0:
+            dist = math.inf
+
+        if dist > largest_dist:
+            largest_dist = dist
+            best_idx = i
+
+    return best_idx
 
 
 def update_slow():
