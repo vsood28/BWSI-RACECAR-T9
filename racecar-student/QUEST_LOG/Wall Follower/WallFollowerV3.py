@@ -1,15 +1,17 @@
-from ftg_func import angle_to
-from ftg_func import largest_gap
 import time
+
+from ftg_func import largest_gap
+from ftg_func import angle_to
 
 import sys
 import math
-
 sys.path.insert(1, '../../library')
 
 import racecar_core
 import racecar_utils as rc_utils
 import time
+
+
 
 start_time = None
 
@@ -33,7 +35,7 @@ class PID:
         if reset:
             self.reset()
 
-        error = setpoint - val
+        error = val - setpoint
         dt = time.perf_counter() - self.prev_tick_called
 
         p = self.kP * error
@@ -80,14 +82,8 @@ def start():
 def update():
     global angle, error, speed
 
-    index = largest_ray(rc.lidar.get_samples())
-
-    n = rc.lidar.get_num_samples()
-
-    error = index * 360 / n
-    if error > 180:
-        error -= 360
-    #CHECK ANGLE SIGN
+    error = follow_gap(rc.lidar)
+    #check angle sign
     angle = steering_pid.tick(0, error)
 
     angle = rc_utils.clamp(angle, -1, 1)
@@ -99,6 +95,20 @@ def update():
     rc.drive.set_max_speed(1)
     rc.drive.set_speed_angle(speed, angle)
     
+def follow_gap(lidar):
+    num_zeroes = 0
+    scan = lidar.get_samples()
+    for i in range(len(scan)):
+        if scan[i] == 0:
+            num_zeroes += 1
+    if num_zeroes < ZERO_THRESHOLD:
+        return largest_ray(scan)
+    else:
+        window = largest_gap(lidar)
+        angle = angle_to(window)
+        return angle
+    
+
 
 def largest_ray(scan):
     n = len(scan)
@@ -106,25 +116,17 @@ def largest_ray(scan):
     largest_dist = -1
     best_idx = 0
 
-    for i in range(n // 4):
+    for i in range(-n//3, n//3):
         dist = scan[i]
-        if dist == 0:
-            dist = math.inf
-
         if dist > largest_dist:
             largest_dist = dist
             best_idx = i
-
-    for i in range(3 * n // 4, n):
-        dist = scan[i]
-        if dist == 0:
-            dist = math.inf
-
-        if dist > largest_dist:
-            largest_dist = dist
-            best_idx = i
-
-    return best_idx
+        
+    print(f"Largest Dist: {largest_dist}")
+    angle = best_idx * 360 / n
+    if angle > 180:
+        angle -= 360
+    return angle    
 
 
 def update_slow():
