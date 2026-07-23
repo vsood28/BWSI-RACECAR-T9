@@ -1,7 +1,6 @@
 import time
 
-from ftg_func import largest_gap
-from ftg_func import angle_to
+
 
 import sys
 import math
@@ -53,7 +52,7 @@ angle = 0.0
 global error
 error = 0.0
 
-KP = 0.1
+KP = 0.03
 KD = 0.0
 
 KPS = 0.002
@@ -81,7 +80,6 @@ def start():
 
 def update():
     global angle, error, speed
-
     error = follow_gap(rc.lidar)
     #check angle sign
     angle = steering_pid.tick(0, error)
@@ -97,16 +95,20 @@ def update():
     
 def follow_gap(lidar):
     num_zeroes = 0
-    scan = lidar.get_samples()
-    for i in range(len(scan)):
+    scan = list(lidar.get_samples())
+    n = lidar.get_num_samples()
+    for i in range(-n//4, n//4):
         if scan[i] == 0:
             num_zeroes += 1
     if num_zeroes < ZERO_THRESHOLD:
+        print("Following Largest Ray")
         return largest_ray(scan)
     else:
-        window = largest_gap(lidar)
-        angle = angle_to(window)
+        angle = largest_window(scan)
+        print("Following Gap")
+        print(f"Target Angle: {angle}")
         return angle
+        
     
 
 
@@ -116,7 +118,7 @@ def largest_ray(scan):
     largest_dist = -1
     best_idx = 0
 
-    for i in range(-n//3, n//3):
+    for i in range(-n//4, n//4):
         dist = scan[i]
         if dist > largest_dist:
             largest_dist = dist
@@ -128,6 +130,27 @@ def largest_ray(scan):
         angle -= 360
     return angle    
 
+def largest_window(scan):
+    n = len(scan)
+    win = [-n//3, -n//3]
+    largest_win = [0, 0]
+    for i in range(-n//4, n//4):
+        if scan[i] == 0: #if zeros
+            if win is None: #if no window
+                win = [i, i] #open
+            else:
+                win[1] = i #udpate cur window end
+        else: #if not zero
+            if win is not None: #if has window
+                if win[1] - win[0] >= largest_win[1] - largest_win[0]: #if winodw greater
+                    largest_win = win #update largest
+                win = None
+    print(f"Largest Win: {largest_win}")            
+    best_idx = (largest_win[0] + largest_win[1]) // 2 #index center
+    angle = best_idx * 360 / n
+    if angle > 180:
+        angle -= 360
+    return angle#to angle
 
 def update_slow():
     global start_time
@@ -137,7 +160,7 @@ def update_slow():
     elapsed = time.time() - start_time
 
     print(f"Elapsed: {elapsed}")
-    print(f"car Angle: {angle}, speed: {speed}")
+    print(f"car Angle: {angle}")
     print(f"Error: {error}")
 
 
