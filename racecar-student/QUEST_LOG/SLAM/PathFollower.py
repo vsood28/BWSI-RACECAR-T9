@@ -1,9 +1,25 @@
 import math
+import EKF
+import SLAMICP
+import occupancy_grid
+import AStarAlgorithm
 KP = 0.0
 KD = 0.0
+global lastError
+lastError = 0
+global pose
+pose = [0,0,0]
+ekf = EKF()
+rc = None
+oc = occupancy_grid(20,20,1010101,123,123)
 class Follower:
-    #add more packaged functions
-    def follow_path(path, pose, lastError, dt):
+    def __init__(self, kP, kD, startPose, rc):
+        KP = kP
+        KD = kD
+        pose = startPose
+        self.rc = rc
+    def follow_path(path, dt):
+        global lastError
         min_dist = 0
         idx = 0
         tar_idx = 0
@@ -25,7 +41,35 @@ class Follower:
         #speed controller?
         speed = error * 0.6
         angle = KP * error + KD * ((error - lastError) / dt)
+        lastError = error
         return speed, angle
+    def update(goalPose):
+        global pose
+        global oc
+        #calls ICP and EKF
+        SLAMICP.update()
+        ICPpose = SLAMICP.get_pose()
+        #implement : pose w IMU
+        IMUPose = [0,0,0]
+        # how tf do i use the EKF sixian
+        FusedPose = [0,0,0]
+        pose = FusedPose
+        dt = rc.get_delta_time()
+        pc = rc.lidar.get_samples()
+        oc.update_grid(pc, pose)
+    def get_pose():
+        global pose
+        return pose    
+    def generate_Path(endPose):
+        global oc
+        global pose
+        return AStarAlgorithm.astar(oc, pose, endPose)
+        
+        
+        
+
+
+
 
 
 
