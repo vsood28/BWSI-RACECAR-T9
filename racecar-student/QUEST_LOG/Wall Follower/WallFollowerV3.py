@@ -94,6 +94,7 @@ def update():
 def largest_ray(scan):
     largest_dist = 0
     theta = 0
+    increment = 360 / 1080
     cur_angle = 0
     for i in range(len(scan)):
         val = scan[i]
@@ -102,7 +103,7 @@ def largest_ray(scan):
         if val > largest_dist:
             largest_dist = val   
             theta = cur_angle 
-        cur_angle += 0.5    
+        cur_angle += increment    
     return theta    
 
 
