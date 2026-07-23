@@ -49,10 +49,10 @@ class OccupancyGrid:
         self.width = width
         self.height = height
         self.resolution = resolution
-        self.prior_odds = prior_odds
+        self.prior_odds = log_odds(prior_odds)
         self.prob_occ_hit = log_odds(poh)
         self.prob_occ_miss = log_odds(pom)
-        self.grid = np.full((width, height), log_odds(prior_odds))
+        self.grid = np.full((width, height), prior_odds)
 
     def update_grid(self, point_cloud, pose):
         abs_points = [p.to_absolute(pose) for p in point_cloud]

@@ -50,3 +50,7 @@ def state_model(state_estimate, control_input, delta_t, **kwargs):
 
 def measurement_model(state_estimate, delta_time, **kwargs): #maps state to predicted measurement
     return state_estimate[:3]
+
+def control_model(raw_controls): #return control output, convert (v, theta) -> (v, omega), sysid 
+    omega = raw_controls[1]
+    return (raw_controls[0], omega)

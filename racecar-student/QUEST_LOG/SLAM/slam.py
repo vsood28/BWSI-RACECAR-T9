@@ -1,20 +1,7 @@
-import rclpy as ros2
-
-class slam(Node):
-    def __init__(self, ekf, occupancy_grid, models, jacobians, sys_params):
+class SLAM:
+    def __init__(self, ekf, occupancy_grid, sys_params):
         self.ekf = ekf
         self.occupancy_grid = occupancy_grid
-
-        s, m = models.values()
-
-        self.state_model = s
-        self.measurement_model = m
-
-        s, m, p = jacobians.values()
-
-        self.state_trans_jacobian = s
-        self.measurement_jacobian = m
-        self.process_noise_jacobian = p
 
         self.sys_params = sys_params
 
