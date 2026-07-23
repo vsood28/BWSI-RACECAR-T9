@@ -34,7 +34,7 @@ class ExtendedKalmanFilter:
         Q = self.process_noise_covariance
         G = self.process_noise_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
 
-        self.state_estimation_covariance = F @ P @F.T + G @ Q @ G.T
+        self.state_estimation_covariance = F @ P @ F.T + G @ Q @ G.T
         
     def update_state(self, true_measurement, delta_t, **kwargs): #measurement step, compares predicted measurement based on state to true measurement, finds difference, applies correction
         predicted_measurement = self.measurement_model(self.state_estimate, delta_t, **kwargs)
