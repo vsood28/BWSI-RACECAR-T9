@@ -5,7 +5,7 @@ def largest_gap(lidar):
 
     pts = []
 
-    for i in range(-n//4, n//4):
+    for i in range(-n//3, n//3):
         if smp[i] != 0:
             ang = (i / n) * (2 * math.pi) #convert to angle
             pts.append((smp[i] * math.sin(ang), smp[i] * math.cos(ang))) #convert to caretsian
