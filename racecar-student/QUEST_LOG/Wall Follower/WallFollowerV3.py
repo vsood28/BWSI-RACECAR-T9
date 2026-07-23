@@ -33,7 +33,7 @@ class PID:
         if reset:
             self.reset()
 
-        error = val - setpoint
+        error = setpoint - val
         dt = time.perf_counter() - self.prev_tick_called
 
         p = self.kP * error
@@ -78,7 +78,10 @@ def start():
 def update():
     global angle, error, speed
 
-    error = largest_ray(rc.lidar)
+    index = largest_ray(rc.lidar)
+    n = rc.lidar.get_num_samples()
+
+    error = 360 * (index / n)
 
     angle = steering_pid.tick(0, error)
 
@@ -93,18 +96,17 @@ def update():
 
 def largest_ray(scan):
     largest_dist = 0
-    theta = 0
-    increment = 360 / 1080
-    cur_angle = 0
+    idx = 0
+    cur_idx = 0
     for i in range(len(scan)):
         val = scan[i]
         if val == 0:
             val = math.inf
         if val > largest_dist:
             largest_dist = val   
-            theta = cur_angle 
-        cur_angle += increment    
-    return theta    
+            idx = cur_idx 
+        cur_idx += 1
+    return idx    
 
 
 def update_slow():
