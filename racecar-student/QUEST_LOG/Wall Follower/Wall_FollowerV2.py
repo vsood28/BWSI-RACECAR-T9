@@ -33,7 +33,7 @@ class PID:
         if reset:
             self.reset()
 
-        error = val - setpoint
+        error = setpoint - val
         dt = time.perf_counter() - self.prev_tick_called
 
         p = self.kP * error
