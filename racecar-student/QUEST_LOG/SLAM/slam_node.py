@@ -31,6 +31,10 @@ class StateEstimationNode(Node):
             10
         )
 
+        self.rtc_sub = self.create_subscription(
+            
+        )
+
         self.angle_cache = 0
 
         sc, mc, pc = initial_covariance.values()

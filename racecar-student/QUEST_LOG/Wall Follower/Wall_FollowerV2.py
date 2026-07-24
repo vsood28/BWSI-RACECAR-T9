@@ -1,5 +1,6 @@
 from ftg_func import angle_to
-from ftg_func import largest_gap
+from ftg_func import largest_gap, tar_ang
+import time
 
 import sys
 import math
@@ -14,51 +15,98 @@ start_time = None
 
 rc = racecar_core.create_racecar()
 
-global lastError
-lastError = 0
+class PID:
+    def __init__(self, kP=0,kI=0,kD=0):
+        self.kP = kP
+        self.kI = kI
+        self.kD = kD
+        self.prev_error = 0
+        self.cum_i_val = 0
+        self.prev_tick_called = 0
 
-KP = 0.06
+    def reset(self):
+        self.prev_error = 0
+        self.cum_i_val = 0
+        self.prev_tick_called = 0
+
+    def tick(self, setpoint, val, reset=False):
+        if reset:
+            self.reset()
+
+        error = val - setpoint
+        dt = time.perf_counter() - self.prev_tick_called
+
+        p = self.kP * error
+        self.cum_i_val += self.kI * error * dt
+        d = self.kD * (error - self.prev_error) / dt
+
+        self.prev_error = error
+        self.prev_tick_called = time.perf_counter()
+
+        return p + self.cum_i_val + d
+
+global angle
+angle = 0.0
+
+global error
+error = 0.0
+
+KP = 2
 KD = 0.0
 
+KPS = 0.002
+KDS = 0
+
+SPEED_BASELINE = 100
+
+steering_pid = PID(kP=KP, kD=KD)
+speed_pid = PID(kP=KPS, kD=KDS)
+
 def start():
-    global lastError
     global start_time
 
-    lastError = 0
+    steering_pid.reset()
+
     rc.drive.set_speed_angle(0, 0)
     rc.drive.set_max_speed(1)
 
     start_time = time.time()
 
+    rc.set_update_slow_time(0.33)
 
+tmp = None
 
-global angle
-angle = 0.0
-global error
-error = 0.0
 def update():
-    global lastError, angle, error
+    global angle, error, speed, tmp
 
-    error = angle_to(largest_gap(rc.lidar))
+    lg = largest_gap(rc.lidar)
+    tmp = lg
+    error = tar_ang(rc.lidar.get_samples(), rc.lidar.get_num_samples(), lg)
 
-    dt = rc.get_delta_time()
+    angle = steering_pid.tick(0, error)
 
-    angle = KP * error + KD * ((error - lastError) / dt)
-   
-    lastError = error
     angle = rc_utils.clamp(angle, -1, 1)
-    rc.drive.set_max_speed(1)
-    rc.drive.set_speed_angle(1, angle)
+
+    l = rc.lidar.get_samples()[0]
+
+    if l == 0:
+        l = 99999999
+
+    speed = speed_pid.tick(SPEED_BASELINE, l)
+    speed = rc_utils.clamp(speed, 0.1, 1) #dont stop (believin')
+
+
+    rc.drive.set_speed_angle(speed, angle)
 
 
 def update_slow():
     global start_time
-    global angle
+    global angle, speed
     global error
+
     elapsed = time.time() - start_time
-    print(f"Elapsed: {elapsed}")
-    print(f"car Angle: {angle}")
-    print(f"Error: {error}")
+
+    print(f"car Angle: {angle}, speed: {speed} Error: {error * 180/math.pi}, lg:{tmp}")
 
 
 if __name__ == "__main__":
