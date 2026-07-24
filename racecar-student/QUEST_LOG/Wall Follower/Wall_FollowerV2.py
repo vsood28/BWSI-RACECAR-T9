@@ -33,7 +33,7 @@ class PID:
         if reset:
             self.reset()
 
-        error = setpoint - val
+        error = val - setpoint
         dt = time.perf_counter() - self.prev_tick_called
 
         p = self.kP * error
@@ -72,14 +72,15 @@ def start():
 
     start_time = time.time()
 
-    rc.set_update_slow_time(0.5)
+    rc.set_update_slow_time(0.33)
 
+tmp = None
 
 def update():
-    global angle, error, speed
+    global angle, error, speed, tmp
 
     lg = largest_gap(rc.lidar)
-    print(lg)
+    tmp = lg
     error = tar_ang(rc.lidar.get_samples(), rc.lidar.get_num_samples(), lg)
 
     angle = steering_pid.tick(0, error)
@@ -87,6 +88,9 @@ def update():
     angle = rc_utils.clamp(angle, -1, 1)
 
     l = rc.lidar.get_samples()[0]
+
+    if l == 0:
+        l = 99999999
 
     speed = speed_pid.tick(SPEED_BASELINE, l)
     speed = rc_utils.clamp(speed, 0.1, 1) #dont stop (believin')
@@ -102,9 +106,7 @@ def update_slow():
 
     elapsed = time.time() - start_time
 
-    print(f"Elapsed: {elapsed}")
-    print(f"car Angle: {angle}, speed: {speed}")
-    print(f"Error: {error * 180/math.pi}")
+    print(f"car Angle: {angle}, speed: {speed} Error: {error * 180/math.pi}, lg:{tmp}")
 
 
 if __name__ == "__main__":
