@@ -9,10 +9,10 @@ class ComplementaryFilter:
         self.yaw = init_yaw
         self.theta = 0.0
 
-    def update(self, ax, ay, az, wx, wy, wz, mz, mx, dt): # accel, gyroscope (angular velocity), and magnetometer values
+    def update(self, ax, ay, az, wx, wy, wz, my, mx, dt): # accel, gyroscope (angular velocity), and magnetometer values
         accel_roll = math.atan2(ay, az) 
         accel_pitch = math.atan2(-ax, math.sqrt(ay**2 + az**2))
-        theta_mag = math.atan2(mz, mx) # axis convention could be off
+        theta_mag = math.atan2(my, mx) # axis convention could be off
         
         self.roll = self.alpha * (self.roll + wx * dt) + ((1 - self.alpha) * accel_roll)
         self.pitch = self.alpha * (self.pitch + wy * dt) + ((1 - self.alpha) * accel_pitch)

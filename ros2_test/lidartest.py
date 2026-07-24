@@ -3,9 +3,6 @@ import rclpy
 from rclpy.node import Node  
 
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Pose, Vector3
-from std_msgs.msg import Float32
-from ackermann_msgs.msg import AckermannDriveStamped
 
 import numpy as np
 
@@ -18,10 +15,11 @@ class WallFollower(Node):
         super().__init__('lidar_test_node')
 
         self__samples = np.array([])
-
-        self.node.create_timer(self.__PUBLISH_PERIOD_SEC, self.__update) # possible that node keyword needs to be removed 
-
+        
         self.__lidar_sub = self.create_subscription(LaserScan, '/scan', self.__scan_callback, 10)
+
+        # remove warning flag
+        self.__lidar_sub
 
     def __scan_callback(self, data):
         scan_data = np.flip(np.multiply(np.array(data.ranges), 100))
@@ -33,7 +31,7 @@ def main():
     node = WallFollower()
     rclpy.spin(node)
     node.destroy_node()
-    rclpy.shutdown()
+    rclpy.shutdown()    
 
 if __name__ == '__main__':
     main()

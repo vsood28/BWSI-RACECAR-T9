@@ -12,13 +12,15 @@ import numpy as np
 ### Classes ###
 
 class WallFollower(Node):
+    __PUBLISH_PERIOD_SEC = 0.05
+
     def __init__(self):
         super().__init__('wall_follower_node')
+
+        self__samples = np.array([])
         
         # copied from drive_real.py
-        self.__publisher = self.node.create_publisher(
-            AckermannDriveStamped, self.__TOPIC, qos_profile=1
-        )
+        self.__publisher = self.node.create_publisher(AckermannDriveStamped, self.__TOPIC, qos_profile=1)
         self.__message = AckermannDriveStamped()
         self.__message.header.frame_id = self.__FRAME_ID
         self.__max_speed = 0.50
@@ -26,29 +28,42 @@ class WallFollower(Node):
         # make sure to initialize variables
         self.node.create_timer(self.__PUBLISH_PERIOD_SEC, self.__update)
 
-        self.create_subscription(Vector3, '/attitude', self.attitude_callback, 10) # print
-        self.create_subscription(Float32, '/velocity', self.velocity_callback, 10) # print
-        # ^ ask sixian for stupid implementation | use for turning speed controller
-        self.create_subscription(Pose, '/pose_estimate', self.pose_callback, 10) # print
+        self.__attitude_sub = self.create_subscription(Vector3, '/attitude', self.attitude_callback, 10) # print
+        self.__velocity_sub = self.create_subscription(Float32, '/velocity', self.velocity_callback, 10) # print
+        self.__pose_sub = self.create_subscription(Pose, '/pose_estimate', self.pose_callback, 10) # print
 
-        self.__lidar_sub = self.create_subscription(LaserScan, self.__SCAN_TOPIC, self.__scan_callback, 10)
+        self.__lidar_sub = self.create_subscription(LaserScan, '/scan       ', self.scan_callback, 10)
 
-        # self.cur_attitude = None
-        # self.cur_velocity = None
-        # self.cur_pose = None
+        # remove warning flags
+        self.__attitude_sub
+        self.__velocity_sub
+        self.__pose_sub
+        self.__lidar_sub
 
-    def __scan_callback(self, data):
+        self.attitude_val = tuple() # should form () 
+        self.velocity_val = 0.0
+        self.pose_val = tuple()
+
+    # data from the lidar - needs to be transformed
+    """
+    # LIDAR Scan returns value in meters, multiplying by 100 to be processed in cm
+    # LIDAR Scan reversed, flipping order of data entry to correct for CW spin - matches with sim
+    # For RPLidar - replace "inf" with 0 to match sim LIDAR data
+    # Note: The real LIDAR returns a scan of length 1080.
+    """
+    def scan_callback(self, data):
         scan_data = np.flip(np.multiply(np.array(data.ranges), 100))
         self.__samples = np.array([0 if str(x) == "inf" else x for x in scan_data])
 
-    def __attitude_callback(self, data):
-        pass
+    # saving values in callbacks if they need to be used later
+    def attitude_callback(self, data):
+        self.attitude_val = (data.x, data.y, data.z) # these callbacks probably dont work 
     
-    def __velocity_callback(self, data):
-        pass
+    def velocity_callback(self, data):
+        self.velocity_val = data # .value ?
 
-    def __pose_callback(self, data):
-        pass
+    def pose_callback(self, data):
+        self.pose_val = (data.x, data.y, data.theta)
 
     def set_speed_angle(self, speed: float, angle: float) -> None:
         assert (
@@ -63,12 +78,12 @@ class WallFollower(Node):
         # sim convention; the throttle/pwm chain handles servo-side sign.
         self.__message.drive.steering_angle = float(-angle)
 
-    def set_max_speed(self, max_speed: float = 0.50) -> None:
-        assert (
-            0.0 <= max_speed <= 1.0
-        ), f"max_speed [{max_speed}] must be between 0.0 and 1.0 inclusive."
+    # def set_max_speed(self, max_speed: float = 0.50) -> None:
+    #     assert (
+    #         0.0 <= max_speed <= 1.0
+    #     ), f"max_speed [{max_speed}] mus  t be between 0.0 and 1.0 inclusive."
 
-        self.__max_speed = max_speed
+    #     self.__max_speed = max_speed
 
     def __update(self):
         """
@@ -82,7 +97,7 @@ class WallFollower(Node):
 
 def main():
     rclpy.init(args=None)
-    node = IMU()
+    node = WallFollower()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
