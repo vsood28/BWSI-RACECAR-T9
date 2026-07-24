@@ -1,5 +1,5 @@
 from ftg_func import angle_to
-from ftg_func import largest_gap
+from ftg_func import largest_gap, tar_ang
 import time
 
 import sys
@@ -51,13 +51,13 @@ angle = 0.0
 global error
 error = 0.0
 
-KP = 1
+KP = 2
 KD = 0.0
 
 KPS = 0.002
 KDS = 0
 
-SPEED_BASELINE = 300
+SPEED_BASELINE = 100
 
 steering_pid = PID(kP=KP, kD=KD)
 speed_pid = PID(kP=KPS, kD=KDS)
@@ -79,7 +79,8 @@ def update():
     global angle, error, speed
 
     lg = largest_gap(rc.lidar)
-    error = angle_to(lg)
+    print(lg)
+    error = tar_ang(rc.lidar.get_samples(), rc.lidar.get_num_samples(), lg)
 
     angle = steering_pid.tick(0, error)
 
@@ -90,7 +91,7 @@ def update():
     speed = speed_pid.tick(SPEED_BASELINE, l)
     speed = rc_utils.clamp(speed, 0.1, 1) #dont stop (believin')
 
-    rc.drive.set_max_speed(1)
+
     rc.drive.set_speed_angle(speed, angle)
 
 
@@ -103,7 +104,7 @@ def update_slow():
 
     print(f"Elapsed: {elapsed}")
     print(f"car Angle: {angle}, speed: {speed}")
-    print(f"Error: {error}")
+    print(f"Error: {error * 180/math.pi}")
 
 
 if __name__ == "__main__":
