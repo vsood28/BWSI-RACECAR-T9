@@ -44,7 +44,7 @@ def update():
 
     #implement normalization condition.
     #get left and right lidar scans with average distances
-    right_dist = rc_utils.get_lidar_average_distance(scan, 50, 20)
+    right_dist = rc_utils.get_lidar_average_distandce(scan, 50, 20)
     left_dist = rc_utils.get_lidar_average_distance(scan, 310, 20)
 
     error = (left_dist - right_dist)
@@ -54,7 +54,7 @@ def update():
     angle = WFC.KP * error + WFC.KD * (error - lastError) / dt
     print(f"Proportional term: {WFC.KP * error},   Derivative term: {WFC.KD * (error - lastError) / dt}")
    
-
+    
     elapsed = time.time() - start_time
     log_writer.writerow([elapsed, error, angle, error * WFC.KP, ((error - lastError) / dt) * WFC.KD])
     lastError = error
