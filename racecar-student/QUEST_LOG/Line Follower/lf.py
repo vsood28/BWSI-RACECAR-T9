@@ -45,7 +45,6 @@ def update_contour():
     global contour_area
 
     image = rc.camera.get_color_image()
-
     if image is None:
         contour_center = None
         contour_area = 0

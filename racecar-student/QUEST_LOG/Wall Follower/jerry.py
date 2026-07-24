@@ -60,8 +60,8 @@ def update():
     angle = float(np.clip(error * kP + d_error * kD, -1.0, 1.0))
     speed = MAX_SPEED
 
-    rc.drive.set_speed_angle(speed, rc_utils.clamp(angle + 0.04, -1.0, 1.0))
-    print(raw_gap)
+    rc.drive.set_speed_angle(speed, rc_utils.clamp(angle, -1.0, 1.0))
+    print(f"raw raw_gap: {raw_gap}, angle: {angle},  speed: {speed}")
 
 rc.set_start_update(start, update)
 rc.go()
