@@ -82,7 +82,7 @@ class WallFollower(Node):
 def main():
     rclpy.init(args=None)
     node = IMU()
-    rclpy.spin(node)
+        rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
