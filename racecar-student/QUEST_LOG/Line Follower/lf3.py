@@ -78,7 +78,8 @@ def pid(p, d, sp):
     dt = rc.get_delta_time()
     angle = (p * error) + d * ((error - lastError) / dt)
     return angle
-
+global sp 
+sp = None
 def update():
     global speed
     global angle
@@ -88,6 +89,7 @@ def update():
     global contour_center
     global lastError
     global log_writer
+    global sp
     sp = update_path()
 
     if sp is not None:
@@ -100,7 +102,7 @@ def update():
         angle = last_angle
 
     lastError = error
-    speed = 0.25
+    speed = 1
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
@@ -108,16 +110,16 @@ def update():
 def update_slow():
     global speed
     global angle
-    global maxc
     global start_time
-    print_params(speed, angle, time, start_time, maxc)
+    global sp
+    print_params(speed, angle, time, start_time, sp)
 
-def print_params(speed, angle, time, start_time, maxc):
+def print_params(speed, angle, time, start_time, sp):
     print(f"Speed {speed}")
     print(f"Angle {angle}")
     print(f"Time: {time.time() - start_time}")
-    if maxc is not None: 
-        print(f"Contour Area: {cv.contourArea(maxc)}")
+    if sp is not None: 
+        print(f"Setpoint: {sp}")
 
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
