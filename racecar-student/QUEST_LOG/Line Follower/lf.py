@@ -13,6 +13,7 @@ log_file = None
 log_writer = None
 start_time = None
 
+#Develop separate strategy - pure pursuit?
 
 rc = racecar_core.create_racecar()
 
@@ -50,7 +51,7 @@ def update_contour():
     global contour_area
     global last_frame_hash
 
-    image = rc.camera.get_color_image()
+    image = rc.camera.get_color_image_no_copy() 
     if image is None:
         contour_center = None
         contour_area = 0
@@ -58,7 +59,6 @@ def update_contour():
 
     frame_hash = hashlib.md5(image.tobytes()).digest()
     if frame_hash == last_frame_hash:
-        # Same frame as last time -- skip reprocessing, keep old contour_center/contour_area/maxc
         return
     last_frame_hash = frame_hash
 
