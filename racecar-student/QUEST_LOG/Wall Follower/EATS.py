@@ -12,8 +12,8 @@ start_time = None
 rc = racecar_core.create_racecar()
 
 
-KP = 0
-KD = 0.001
+KD = 0
+KP = 0.005
 
 global angle
 angle = 0.0
@@ -41,7 +41,7 @@ def update():
     angle = KP * error + KD * ((error - lastError) / dt)
     lastError = error
     angle = rc_utils.clamp(angle, -1, 1)
-    speed = 0.25
+    speed = 0.5
     rc.drive.set_speed_angle(speed, angle)
     
 def get_error(scan):

@@ -38,27 +38,33 @@ import hashlib
 
 global last_frame_hash
 last_frame_hash = None
-
+global last_look
+last_look = 960
 def update_path():
-    global last_frame_hash
+    global last_frame_hash, last_look
 
     image = rc.camera.get_color_image()
     if image is None:
+        lookahead_x = last_look
         return
     image = rc_utils.crop(image, CROP[0], CROP[1])
     frame_hash = hashlib.md5(image.tobytes()).digest()
     if frame_hash == last_frame_hash:
+        lookahead_x = last_look
         return
     last_frame_hash = frame_hash
 
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     blue_mask = cv.inRange(hsv, LFC.BLUE[0], LFC.BLUE[1])
     ys, xs = np.where(blue_mask > 0)
-    if len(xs) < 500:
-        return None
+    print("pixels:", len(xs))
+
     coeffs = np.polyfit(ys, xs, 2)
+
     lookahead_x = np.polyval(coeffs, LOOKAHEAD_Y)
-    #rc.display.show_color_image(image)
+
+    print("lookahead:", lookahead_x)
+
     return lookahead_x
 
 def start():
@@ -72,7 +78,7 @@ def start():
     log_writer = csv.writer(log_file)
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(0.4)
+    rc.drive.set_max_speed(0.3)
 def pid(p, d, sp):
     error = (sp - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
     dt = rc.get_delta_time()
@@ -102,7 +108,7 @@ def update():
         angle = last_angle
 
     lastError = error
-    speed = 1
+    speed = 0.5
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
