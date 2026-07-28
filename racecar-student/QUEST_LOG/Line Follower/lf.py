@@ -13,13 +13,11 @@ log_file = None
 log_writer = None
 start_time = None
 
-#Develop separate strategy - pure pursuit?
-
 rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
-MIN_CONTOUR_AREA = 3000 # tune
+MIN_CONTOUR_AREA = 2500 # tune
 
 # check the crop and hsv values
 
@@ -29,7 +27,7 @@ height = rc.camera.get_height()
 width = rc.camera.get_width()
 
 LOOKAHEAD_Y = 220
-CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((210, 0), (rc.camera.get_height() - 50, rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -79,7 +77,7 @@ def update_contour():
         contour_center = None
         contour_area = 0
         maxc = None
-    #rc.display.show_color_image(image)
+    rc.display.show_color_image(image)
 
 def start():
     global speed
