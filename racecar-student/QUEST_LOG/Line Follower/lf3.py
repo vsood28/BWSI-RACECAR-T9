@@ -13,21 +13,15 @@ log_file = None
 log_writer = None
 start_time = None
 
+#Develop separate strategy - pure pursuit?
+
 rc = racecar_core.create_racecar()
-
-global maxc # max contour area of blue mask
-maxc = None
-MIN_CONTOUR_AREA = 2500 # tune
-
-# check the crop and hsv values
+CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
 
 # 1920 by 1080
-height = rc.camera.get_height()
-width = rc.camera.get_width()
 
 LOOKAHEAD_Y = 220
-CROP = ((210, 0), (rc.camera.get_height() - 50, rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -38,46 +32,40 @@ lastError = error
 speed = 0.0
 angle = 0.0
 last_angle = angle
-contour_center = None
-contour_area = 0
 
-def update_contour():
-    global maxc
-    global contour_center
-    global contour_area
+
+import hashlib
+
+global last_frame_hash
+last_frame_hash = None
+global last_look
+last_look = 960
+def update_path():
+    global last_frame_hash, last_look
 
     image = rc.camera.get_color_image()
     if image is None:
-        contour_center = None
-        contour_area = 0
+        lookahead_x = last_look
         return
-
     image = rc_utils.crop(image, CROP[0], CROP[1])
+    frame_hash = hashlib.md5(image.tobytes()).digest()
+    if frame_hash == last_frame_hash:
+        lookahead_x = last_look
+        return
+    last_frame_hash = frame_hash
+
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     blue_mask = cv.inRange(hsv, LFC.BLUE[0], LFC.BLUE[1])
-    blue_contours, _ = cv.findContours(blue_mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    ys, xs = np.where(blue_mask > 0)
+    print("pixels:", len(xs))
 
-    def get_largest(contours):
-        max_c = None
-        max_area = 0
-        for c in contours:
-            area = cv.contourArea(c)
-            if area > max_area and area > MIN_CONTOUR_AREA:
-                max_area = area
-                max_c = c
-        return max_c, max_area
+    coeffs = np.polyfit(ys, xs, 2)
 
-    bluemax, bluearea = get_largest(blue_contours)
+    lookahead_x = np.polyval(coeffs, LOOKAHEAD_Y)
 
-    if bluemax is not None:
-        contour_center = rc_utils.get_contour_center(bluemax)
-        contour_area = bluearea
-        maxc = bluemax
-    else:
-        contour_center = None
-        contour_area = 0
-        maxc = None
-    rc.display.show_color_image(image)
+    print("lookahead:", lookahead_x)
+
+    return lookahead_x
 
 def start():
     global speed
@@ -90,14 +78,14 @@ def start():
     log_writer = csv.writer(log_file)
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(0.5)
-def pid(p, d):
-
-    error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
+    rc.drive.set_max_speed(0.3)
+def pid(p, d, sp):
+    error = (sp - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
     dt = rc.get_delta_time()
     angle = (p * error) + d * ((error - lastError) / dt)
     return angle
-
+global sp 
+sp = None
 def update():
     global speed
     global angle
@@ -107,10 +95,11 @@ def update():
     global contour_center
     global lastError
     global log_writer
-    update_contour()
+    global sp
+    sp = update_path()
 
-    if contour_center is not None:
-        angle = pid(LFC.KP, LFC.KD)
+    if sp is not None:
+        angle = pid(LFC.KP, LFC.KD, sp)
         elapsed = time.time() - start_time
         log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
@@ -119,7 +108,7 @@ def update():
         angle = last_angle
 
     lastError = error
-    speed = 0.25
+    speed = 0.5
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
@@ -127,16 +116,16 @@ def update():
 def update_slow():
     global speed
     global angle
-    global maxc
     global start_time
-    print_params(speed, angle, time, start_time, maxc)
+    global sp
+    print_params(speed, angle, time, start_time, sp)
 
-def print_params(speed, angle, time, start_time, maxc):
+def print_params(speed, angle, time, start_time, sp):
     print(f"Speed {speed}")
     print(f"Angle {angle}")
     print(f"Time: {time.time() - start_time}")
-    if maxc is not None: 
-        print(f"Contour Area: {cv.contourArea(maxc)}")
+    if sp is not None: 
+        print(f"Setpoint: {sp}")
 
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
