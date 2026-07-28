@@ -13,13 +13,11 @@ log_file = None
 log_writer = None
 start_time = None
 
-#Develop separate strategy - pure pursuit?
-
 rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
-MIN_CONTOUR_AREA = 3000 # tune
+MIN_CONTOUR_AREA = 2500 # tune
 
 # check the crop and hsv values
 
@@ -29,7 +27,7 @@ height = rc.camera.get_height()
 width = rc.camera.get_width()
 
 LOOKAHEAD_Y = 220
-CROP = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP = ((210, 0), (rc.camera.get_height() - 50, rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -43,28 +41,16 @@ last_angle = angle
 contour_center = None
 contour_area = 0
 
-
-import hashlib
-
-global last_frame_hash
-last_frame_hash = None
-
 def update_contour():
     global maxc
     global contour_center
     global contour_area
-    global last_frame_hash
 
     image = rc.camera.get_color_image()
     if image is None:
         contour_center = None
         contour_area = 0
         return
-
-    frame_hash = hashlib.md5(image.tobytes()).digest()
-    if frame_hash == last_frame_hash:
-        return
-    last_frame_hash = frame_hash
 
     image = rc_utils.crop(image, CROP[0], CROP[1])
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
@@ -91,7 +77,7 @@ def update_contour():
         contour_center = None
         contour_area = 0
         maxc = None
-    #rc.display.show_color_image(image)
+    rc.display.show_color_image(image)
 
 def start():
     global speed
@@ -104,7 +90,7 @@ def start():
     log_writer = csv.writer(log_file)
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(0.4)
+    rc.drive.set_max_speed(0.5)
 def pid(p, d):
 
     error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
