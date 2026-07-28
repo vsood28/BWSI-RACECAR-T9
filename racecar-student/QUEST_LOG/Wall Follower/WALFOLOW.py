@@ -11,6 +11,8 @@ import racecar_core
 import racecar_utils as rc_utils
 import time
 
+# Weighted ALgorithimic Farthest Opening LOokahead and Wayfinding
+
 start_time = None
 
 rc = racecar_core.create_racecar()
