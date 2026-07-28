@@ -1,9 +1,9 @@
-from ftg_func import angle_to
+from ftg_func import angle_to 
 from ftg_func import largest_gap, tar_ang, farthest_gap
 import time
 
 import sys
-import math
+import math #Weighted ALgorithimic Farthest Opening LOokahead and Wayfinding 
 
 sys.path.insert(1, '../../library')
 
