@@ -33,27 +33,14 @@ speed = 0.0
 angle = 0.0
 last_angle = angle
 
-
-import hashlib
-
-global last_frame_hash
-last_frame_hash = None
 global last_look
 last_look = 960
 def update_path():
-    global last_frame_hash, last_look
-
     image = rc.camera.get_color_image()
     if image is None:
         lookahead_x = last_look
         return
     image = rc_utils.crop(image, CROP[0], CROP[1])
-    frame_hash = hashlib.md5(image.tobytes()).digest()
-    if frame_hash == last_frame_hash:
-        lookahead_x = last_look
-        return
-    last_frame_hash = frame_hash
-
     hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     blue_mask = cv.inRange(hsv, LFC.BLUE[0], LFC.BLUE[1])
     ys, xs = np.where(blue_mask > 0)
@@ -90,16 +77,14 @@ def update():
     global speed
     global angle
     global last_angle
-    global maxc
     global error
-    global contour_center
     global lastError
     global log_writer
     global sp
     sp = update_path()
 
     if sp is not None:
-        angle = pid(LFC.KP, LFC.KD, sp)
+        angle = pid(LFC.KP2, LFC.KD2, sp)
         elapsed = time.time() - start_time
         log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)

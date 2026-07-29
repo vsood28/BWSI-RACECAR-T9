@@ -44,7 +44,7 @@ def start():
 
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(1)
+    rc.drive.set_max_speed(0.5)
 
 global flag
 flag = False
@@ -75,13 +75,13 @@ def update():
         error = lastError
 
     dt = rc.get_delta_time()
-    angle = (LFC.KP * error) + LFC.KD * ((error - lastError) / dt)
+    angle = (LFC.KP2 * error) + LFC.KD2 * ((error - lastError) / dt)
     elapsed = time.time() - start_time
     log_writer.writerow([elapsed, error, angle, LFC.KP * error, LFC.KD * ((error - lastError) / dt)])
     angle = rc_utils.clamp(angle, -1, 1)
 
     lastError = error
-    speed = 0.8
+    speed = 0.5
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
@@ -89,8 +89,8 @@ def update():
 def update_slow():
     global speed
     global angle
-    global maxc
     global start_time
+    
     print(f"Speed {speed}")
     print(f"Angle {angle}")
     print(f"Time: {time.time() - start_time}")
