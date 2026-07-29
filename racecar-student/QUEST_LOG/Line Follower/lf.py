@@ -17,7 +17,7 @@ rc = racecar_core.create_racecar()
 
 global maxc # max contour area of blue mask
 maxc = None
-MIN_CONTOUR_AREA = 2500 # tune
+MIN_CONTOUR_AREA = 100 # tune
 
 # check the crop and hsv values
 
@@ -27,7 +27,7 @@ height = rc.camera.get_height()
 width = rc.camera.get_width()
 
 LOOKAHEAD_Y = 220
-CROP = ((210, 0), (rc.camera.get_height() - 50, rc.camera.get_width()))
+CROP = ((180, 0), (rc.camera.get_height() - 40, rc.camera.get_width()))
 
 global error
 error = 0.0
@@ -77,7 +77,7 @@ def update_contour():
         contour_center = None
         contour_area = 0
         maxc = None
-    rc.display.show_color_image(image)
+    #rc.display.show_color_image(image)
 
 def start():
     global speed
@@ -91,11 +91,11 @@ def start():
     rc.drive.set_speed_angle(speed, angle)
     rc.set_update_slow_time(0.5)
     rc.drive.set_max_speed(0.5)
-def pid(p, d):
-
+def pid(p, d, dt):
+    global lastError
     error = (contour_center[1] - LFC.CAMERA_OFFSET) - (rc.camera.get_width() // 2)
-    dt = rc.get_delta_time()
     angle = (p * error) + d * ((error - lastError) / dt)
+    lastError = error
     return angle
 
 def update():
@@ -108,18 +108,18 @@ def update():
     global lastError
     global log_writer
     update_contour()
-
+    dt = rc.get_delta_time()
     if contour_center is not None:
-        angle = pid(LFC.KP, LFC.KD)
+        angle = pid(LFC.KP, LFC.KD, dt)
         elapsed = time.time() - start_time
         log_writer.writerow([elapsed, error, angle])
         angle = rc_utils.clamp(angle, -1, 1)
         log_writer.writerow(["time", "error", "angle"])
     else:
-        angle = last_angle
-
-    lastError = error
-    speed = 0.25
+        angle = last_angle * 1.1
+    #back to 0.4
+    speed = 0.5
+    angle = rc_utils.clamp(angle, -1,1)
     rc.drive.set_speed_angle(speed, angle)
     last_angle = angle
 
