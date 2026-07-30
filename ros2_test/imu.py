@@ -17,12 +17,11 @@ from std_msgs.msg import Float32
 import filters
 import time
 import math
-
+import numpy as np
 
 ### Classes ###
 # self = global
 
-# what is this parameter
 class ImuNode(Node):
     def __init__(self): 
         super().__init__('imu_publisher_node')
@@ -41,7 +40,7 @@ class ImuNode(Node):
         self.__pose_est_message = Pose2D()
 
         # Filters and extra useful variables + usages
-        self.kf1_velocity = filters.KalmanFilter(0.1, 0) # linear velocity - we can switch to 1 if neededd
+        self.kf1_velocity = filters.KalmanFilter(1, 0) # linear velocity - we can switch to 0.1 if needed
         self.kf2_posx = filters.KalmanFilter(0.1, 0) # position (x)
         self.kf3_posz = filters.KalmanFilter(0.1, 0) # position (y)
 
@@ -78,15 +77,21 @@ class ImuNode(Node):
         self.__imu_sub = self.create_subscription(Imu, '/imu/fused', self.imu_fused_callback, qos)
         self.__mag_sub = self.create_subscription(MagneticField, '/mag', self.mag_callback, qos)
 
-        # remove the warning flags ig
+        # remove the warning flags 
         self.__imu_sub
         self.__mag_sub
 
 
-    def imu_fused_callback(self, data): # called every time something is published
+    # called every time something is published
+    def imu_fused_callback(self, data): 
+        new_time = time.time()
+
         if self.old_time == 0.0:
-            self.old_time = time.time() 
+            self.old_time = new_time
             return
+
+        dt = new_time - self.old_time # dt for all integration
+        self.old_time = new_time
 
         self.wx = data.angular_velocity.x + 0.01117
         self.wy = data.angular_velocity.y - 0.01299
@@ -94,51 +99,37 @@ class ImuNode(Node):
         
         self.ax = data.linear_acceleration.x - 0.00382
         self.ay = data.linear_acceleration.y - 0.38592
-        self.az = data.linear_acceleration.z + 0.30102  
-
-        
-
-        new_time = time.time()
-        dt = new_time - self.old_time # dt for all integration
-        self.old_time = new_time
-        
-        ########################## LINEAR VELOCITY ##########################
-
-        # integrating acceleration values
-        self.velocity_x = self.velocity_x + self.ax * dt
-        self.velocity_y = self.velocity_y + self.ay * dt 
-        # y should technically be equal to zero type
-        self.velocity_z = self.velocity_z + self.az * dt
-
-        # combines velocity into a scalar 
-        self.velocity_scalar = self.velocity_x ** 2 + self.velocity_z ** 2
-
-        # passing velocity into a kalman filter
-        self.__velocity_message.data = self.kf1_velocity.update(self.velocity_scalar)
-
-        # publishing final scalar velocity
-        self.__velocity_pub.publish(self.__velocity_message)
+        self.az = data.linear_acceleration.z + 0.30102              
 
         ############################## ATTITUDE ###############################
-
+        
         # integrating angular velocity values
         self.roll = self.roll + self.wx * dt
         self.pitch = self.pitch + self.wy * dt
         self.yaw = self.yaw + self.wz * dt
-
+        
         # passing values into a complementary filter 
         at_x, at_y, at_z, _ = self.compf1_att.update( 
                               self.ax, self.ay, self.az, 
                               self.wx, self.wy, self.wz,
                               0.0, 0.0, dt)
-    
-        # taking the values out of complementary filter and assigning them to the message data
+            
         self.__attitude_message.x = at_x
         self.__attitude_message.y = at_y
         self.__attitude_message.z = at_z
+        
+        ########################## LINEAR VELOCITY ##########################
 
-        # publishing final attitude components
-        self.__attitude_pub.publish(self.__attitude_message)
+        # integrating acceleration values
+        self.velocity_x = self.velocity_x + self.ax * dt
+        self.velocity_y = self.velocity_y + self.ay * dt # should technically be equal to zero ???
+        self.velocity_z = self.velocity_z + self.az * dt
+
+        # combines velocity into a scalar 
+        self.velocity_scalar = math.sqrt(self.velocity_x ** 2 + self.velocity_z ** 2)   
+
+        # kalman filter
+        self.__velocity_message.data = self.kf1_velocity.update(self.velocity_scalar)
 
         ############################### POSE ####################################
         # x,y = x,z because y has the gravity acceleration in it for some reason
@@ -155,20 +146,24 @@ class ImuNode(Node):
         new_my = (self.my * math.cos(self.roll))
         - (self.mz * math.sin(self.roll))
     
-        # passing theta into complementary filter
+        # complementary filter
         _, _, _, final_theta = self.compf2_theta.update( 
                                             0.0, 0.0, 0.0,
                                             0.0, 0.0, 0.0,
                                             new_my, new_mx, dt)
 
-        # use lidar to fix position
+        # use lidar to fix position ????????????????
 
-        # assigning various values to message data
+        # kalman filters
         self.__pose_est_message.x = self.kf2_posx.update(self.position_x)
         self.__pose_est_message.y = self.kf3_posz.update(self.position_z)
         self.__pose_est_message.theta = final_theta
 
-        # publishing final 2d pose values
+        ########################### PUBLISHING VALUES ###############################
+        
+        # linear velocity, attitude, 2d pose
+        self.__velocity_pub.publish(self.__velocity_message)
+        self.__attitude_pub.publish(self.__attitude_message)
         self.__pose_est_pub.publish(self.__pose_est_message)
 
 
@@ -182,7 +177,6 @@ def main():
     rclpy.init(args=None)
     node = ImuNode()
     rclpy.spin(node)
-
     node.destroy_node()
     rclpy.shutdown()
 
