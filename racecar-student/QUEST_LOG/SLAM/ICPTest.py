@@ -1,34 +1,32 @@
 import sys
 
-sys.path.insert(1, '../../library')
+sys.path.insert(1, "../../library")
+
 import racecar_core
-import racecar_utils as rc_utils
 import SLAMICP
 
 rc = racecar_core.create_racecar()
-global speed 
+
+pose = [0.0, 0.0, 0.0]
+
 speed = 0
-global angle
 angle = 0
 
+
 def start():
-    global speed
-    global angle
-    speed = 0
-    angle = 0
-
-    rc.drive.set_speed_angle(speed, angle)
+    rc.drive.set_max_speed(1.0)
     rc.set_update_slow_time(0.5)
-    rc.drive.set_max_speed(1)
 
-global pose
-pose = [0,0,0]
+
 def update():
-    global speed
-    global angle
+    global speed, angle, pose
+
     delta = SLAMICP.update(rc.lidar.get_samples())
-    for i in range(3):
-        pose[i] += delta[i]
+
+    pose[0] += delta[0]
+    pose[1] += delta[1]
+    pose[2] += delta[2]
+
     if rc.controller.get_trigger(rc.controller.Trigger.RIGHT) > 0:
         speed = 1
     elif rc.controller.get_trigger(rc.controller.Trigger.LEFT) > 0:
@@ -36,7 +34,8 @@ def update():
     else:
         speed = 0
 
-    (x, y) = rc.controller.get_joystick(rc.controller.Joystick.LEFT)
+    x, _ = rc.controller.get_joystick(rc.controller.Joystick.LEFT)
+
     if x > 0.5:
         angle = 1
     elif x < -0.5:
@@ -44,15 +43,11 @@ def update():
     else:
         angle = 0
 
-
-
-
-    
+    rc.drive.set_speed_angle(speed, angle)
 
 
 def update_slow():
     pass
-
 
 
 if __name__ == "__main__":
