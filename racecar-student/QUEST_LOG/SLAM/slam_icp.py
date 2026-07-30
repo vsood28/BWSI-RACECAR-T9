@@ -27,27 +27,47 @@ class ICPScanMatcher:
     # ---------- static/pure helpers ----------
 
     @staticmethod
-    def scan_to_points(scan_data):
+    def scan_to_points(scan_data, angle_min=-math.pi, angle_increment=None,
+                    range_min=0.05, range_max=12):
+        """
+        Convert scan ranges in meters into Nx2 Cartesian points.
+
+        Parameters
+        ----------
+        scan_data:
+            Iterable of ranges in meters.
+        angle_min:
+            Angle of the first measurement in radians.
+        angle_increment:
+            Angular separation between measurements in radians.
+        range_min:
+            Minimum valid range.
+        range_max:
+            Maximum valid range.
+        """
         points = []
 
         num_samples = len(scan_data)
-        angle_increment = 360.0 / num_samples
+
+        if num_samples == 0:
+            return np.empty((0, 2))
+
+        if angle_increment is None:
+            angle_increment = (2.0 * math.pi) / num_samples
 
         for i, dist in enumerate(scan_data):
-            # Convert cm -> meters
-            dist = dist / 100.0
 
-            if dist < 0.10 or dist > 10.0:
-                continue
+            if not np.isfinite(dist) or dist < range_min or dist > range_max: #inv becomes 0
+                dist = 0.0
 
-            angle = math.radians(i * angle_increment)
+            angle = angle_min + i * angle_increment
 
             x = dist * math.cos(angle)
             y = dist * math.sin(angle)
 
             points.append([x, y])
 
-        return np.array(points)
+        return np.asarray(points, dtype=float)
 
     @staticmethod
     def get_nearest_neighbors(source, target):
@@ -123,7 +143,7 @@ class ICPScanMatcher:
 
     # ---------- public API ----------
 
-    def update(self, scan_data):
+    def update(self, scan_data, angle_min=-math.pi, angle_increment=None):
         """
         Feed in a new scan. Updates internal pose estimate and returns
         the current Pose.
@@ -131,7 +151,11 @@ class ICPScanMatcher:
         if scan_data is None:
             return self.state
 
-        cur_points = self.scan_to_points(scan_data)
+        cur_points = self.scan_to_points(
+            scan_data,
+            angle_min=angle_min,
+            angle_increment=angle_increment,
+        )
 
         if (
             self.last_points is None

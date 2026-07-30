@@ -1,5 +1,5 @@
 from ftg_func import angle_to 
-from ftg_func import largest_gap, tar_ang, farthest_gap
+from ftg_func import tar_ang, farthest_gap
 import time
 
 import sys
