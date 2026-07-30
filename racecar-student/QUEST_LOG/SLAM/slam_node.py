@@ -1,5 +1,8 @@
 import rclpy as ros2
 from rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import Float32
 from EKF import ExtendedKalmanFilter
 from slam import SLAM
 from occupancy_grid import OccupancyGrid
@@ -31,10 +34,6 @@ class StateEstimationNode(Node):
             10
         )
 
-        self.rtc_sub = self.create_subscription(
-            
-        )
-
         self.angle_cache = 0
 
         sc, mc, pc = initial_covariance.values()
@@ -43,7 +42,7 @@ class StateEstimationNode(Node):
 
         sj, mj, pj = jacobians.values()
 
-        self.controller_model = cm
+        self.control_model = cm
 
         ekf = ExtendedKalmanFilter(initial_state, sc, pc, mc, sj, mj, pj, sm, mm)
 

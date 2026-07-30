@@ -13,7 +13,6 @@ class Position:
         return np.array([self.x, self.y])
     
     def to_absolute(self, reference_pose):
-        """Convert this local position into the global frame defined by reference_pose."""
         c = math.cos(reference_pose.dir)
         s = math.sin(reference_pose.dir)
 

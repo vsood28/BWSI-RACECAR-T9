@@ -65,7 +65,7 @@ class OccupancyGrid:
 
         for p in abs_points:
             empty += bresenham(x0, y0, p.x, p.y, self.resolution)[:-1] #last point is the final point that is hit
-            hit.append((p.x // self.resolution, p.y // self.resolution)) #from world coords to grid coords
+            hit.append((int(p.x // self.resolution), int(p.y // self.resolution))) #from world coords to grid coords
 
         for cell in empty:
             x, y = cell
@@ -76,11 +76,11 @@ class OccupancyGrid:
             self.grid[x][y] = bayesian_update(self.grid[x][y], self.prob_occ_hit, self.prior_odds)
 
     def world_to_grid(self, x, y):
-        return x // self.resolution, y // self.resolution
+        return int(x // self.resolution), int(y // self.resolution)
     
     def grid_to_world(self, x, y):
         return x * self.resolution, y * self.resolution
 
     def get_odds(self, x, y):
-        return recover_probability(self.grid[x // self.resolution][y // self.resolution]) #world coord to grid coord
+        return recover_probability(self.grid[int(x // self.resolution)][int(y // self.resolution)]) #world coord to grid coord
         

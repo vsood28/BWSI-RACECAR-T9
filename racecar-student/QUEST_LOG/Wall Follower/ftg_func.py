@@ -1,6 +1,6 @@
 import math
 
-def rolling_avg(pts, size=5): #grap rolling avgs
+def rolling_avg(pts, size=6): #grap rolling avgs
     if not pts or size <= 0: #invid
         return []
 
@@ -32,8 +32,6 @@ def farthest_gap(lidar, min_gap_size = 20): #farthest
     def to_cart(ray, ang):
         return (ray * math.sin(ang), ray * math.cos(ang))
     
-    
-
     for i in range(-n//4, n//4): #for i in range
         if smp[i] != 0:
             ang = to_angle(i) #convert to angle

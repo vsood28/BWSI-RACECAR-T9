@@ -51,6 +51,9 @@ def state_model(state_estimate, control_input, delta_t, **kwargs):
 def measurement_model(state_estimate, delta_time, **kwargs): #maps state to predicted measurement
     return state_estimate[:3]
 
+def steering_model(time, control_angle):
+      return -0.014176 + ((0.373024 * control_angle) + 0.070863) / (1 + np.exp(-28.856830 * (time - 0.092375)))
+
 def control_model(raw_controls): #return control output, convert (v, theta) -> (v, omega), sysid 
     omega = raw_controls[1]
     return (raw_controls[0], omega)
