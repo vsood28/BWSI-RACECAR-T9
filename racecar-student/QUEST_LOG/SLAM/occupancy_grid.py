@@ -1,3 +1,6 @@
+from nav_msgs.msg import OccupancyGrid as ROSOccupancyGrid
+from geometry_msgs.msg import Pose
+from std_msgs.msg import Header
 import numpy as np
 import math
 
@@ -52,7 +55,85 @@ class OccupancyGrid:
         self.prior_odds = log_odds(prior_odds)
         self.prob_occ_hit = log_odds(poh)
         self.prob_occ_miss = log_odds(pom)
-        self.grid = np.full((width, height), prior_odds)
+        self.grid = np.full((width, height), prior_odds, dtype=np.float64)
+
+    def to_ros_occupancy_grid(
+        self,
+        frame_id="map",
+        origin_x=0.0,
+        origin_y=0.0,
+        stamp=None,
+        unknown_threshold=0.5
+    ):
+        """
+        Convert the internal log-odds occupancy grid to a ROS 2
+        nav_msgs/msg/OccupancyGrid message.
+
+        Parameters
+        ----------
+        frame_id : str
+            Coordinate frame of the map.
+
+        origin_x, origin_y : float
+            World coordinates of the lower-left corner of the map.
+
+        stamp : builtin_interfaces.msg.Time, optional
+            ROS timestamp. If None, the message stamp is left at zero.
+
+        unknown_threshold : float
+            Cells whose probability is close to the prior probability
+            are marked as unknown (-1).
+        """
+
+        msg = ROSOccupancyGrid()
+
+        # Header
+        msg.header.frame_id = frame_id
+
+        if stamp is not None:
+            msg.header.stamp = stamp
+
+        # Map metadata
+        msg.info.resolution = float(self.resolution)
+        msg.info.width = int(self.width)
+        msg.info.height = int(self.height)
+
+        # Map origin
+        msg.info.origin.position.x = float(origin_x)
+        msg.info.origin.position.y = float(origin_y)
+        msg.info.origin.position.z = 0.0
+
+        # Identity orientation: no rotation.
+        msg.info.origin.orientation.x = 0.0
+        msg.info.origin.orientation.y = 0.0
+        msg.info.origin.orientation.z = 0.0
+        msg.info.origin.orientation.w = 1.0
+
+        # Convert log-odds to probabilities.
+        probabilities = 1.0 / (1.0 + np.exp(-self.grid))
+
+        # Convert probabilities from [0, 1] to ROS occupancy [0, 100].
+        occupancy = np.rint(probabilities * 100.0).astype(np.int8)
+
+        # Cells that have not meaningfully changed from the prior are unknown.
+        prior_probability = recover_probability(self.prior_odds)
+
+        unknown = (
+            np.abs(probabilities - prior_probability)
+            < unknown_threshold
+        )
+
+        occupancy[unknown] = -1
+
+        # ROS uses row-major order:
+        # data[y * width + x]
+        #
+        # Internal grid shape is (width, height), so transpose it
+        # to (height, width) before flattening.
+        msg.data = occupancy.T.flatten().tolist()
+
+        return msg
+
 
     def update_grid(self, point_cloud, pose):
         abs_points = [p.to_absolute(pose) for p in point_cloud]

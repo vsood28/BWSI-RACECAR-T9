@@ -16,4 +16,6 @@ class SLAM:
     
     def estimate_callback(self, control_input, delta_t):
         self.ekf.predict_state(control_input, delta_t, **self.sys_params)
-        
+
+    def measurement_callback(self, measured_position, delta_t):
+        self.ekf.update_state(measured_position, delta_t, **self.sys_params)
