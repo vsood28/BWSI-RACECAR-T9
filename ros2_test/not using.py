@@ -26,13 +26,13 @@ class WallFollower(Node):
         self.__max_speed = 0.50
 
         # make sure to initialize variables
-        self.node.create_timer(self.__PUBLISH_PERIOD_SEC, self.__update)
+        self.node.create_timer(self.__PUBLISH_PERIOD_SEC, self.__update)    
 
         self.__attitude_sub = self.create_subscription(Vector3, '/attitude', self.attitude_callback, 10) # print
         self.__velocity_sub = self.create_subscription(Float32, '/velocity', self.velocity_callback, 10) # print
         self.__pose_sub = self.create_subscription(Pose, '/pose_estimate', self.pose_callback, 10) # print
 
-        self.__lidar_sub = self.create_subscription(LaserScan, '/scan       ', self.scan_callback, 10)
+        self.__lidar_sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
 
         # remove warning flags
         self.__attitude_sub
@@ -51,6 +51,7 @@ class WallFollower(Node):
     # For RPLidar - replace "inf" with 0 to match sim LIDAR data
     # Note: The real LIDAR returns a scan of length 1080.
     """
+
     def scan_callback(self, data):
         scan_data = np.flip(np.multiply(np.array(data.ranges), 100))
         self.__samples = np.array([0 if str(x) == "inf" else x for x in scan_data])
@@ -64,6 +65,9 @@ class WallFollower(Node):
 
     def pose_callback(self, data):
         self.pose_val = (data.x, data.y, data.theta)
+
+    def wall_follower():
+        pass
 
     def set_speed_angle(self, speed: float, angle: float) -> None:
         assert (

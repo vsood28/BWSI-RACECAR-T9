@@ -18,6 +18,7 @@ import filters
 import time
 import math
 
+
 ### Classes ###
 # self = global
 
@@ -40,14 +41,14 @@ class ImuNode(Node):
         self.__pose_est_message = Pose2D()
 
         # Filters and extra useful variables + usages
-        self.kf1_velocity = filters.KalmanFilter(1, 0) # linear velocity - we can switch to 1 if neededd
+        self.kf1_velocity = filters.KalmanFilter(0.1, 0) # linear velocity - we can switch to 1 if neededd
         self.kf2_posx = filters.KalmanFilter(0.1, 0) # position (x)
         self.kf3_posz = filters.KalmanFilter(0.1, 0) # position (y)
 
-        # globals initialized here (?)
+        # globals initialized here
         self.old_time = 0.0
-
         self.velocity_x = 0.0 
+        self.velocity_y = 0.0           
         self.velocity_z = 0.0   
 
         self.roll = 0.0
@@ -87,6 +88,16 @@ class ImuNode(Node):
             self.old_time = time.time() 
             return
 
+        self.wx = data.angular_velocity.x + 0.01117
+        self.wy = data.angular_velocity.y - 0.01299
+        self.wz = data.angular_velocity.z - 0.02923
+        
+        self.ax = data.linear_acceleration.x - 0.00382
+        self.ay = data.linear_acceleration.y - 0.38592
+        self.az = data.linear_acceleration.z + 0.30102  
+
+        
+
         new_time = time.time()
         dt = new_time - self.old_time # dt for all integration
         self.old_time = new_time
@@ -94,10 +105,10 @@ class ImuNode(Node):
         ########################## LINEAR VELOCITY ##########################
 
         # integrating acceleration values
-        self.velocity_x = self.velocity_x + data.linear_acceleration.x * dt
-        # self.velocity_y = self.velocity_y + data.linear_acceleration.y * dt 
-        # # y should technically be equal to zero - maybe ignorable?
-        self.velocity_z = self.velocity_z + data.linear_acceleration.z * dt
+        self.velocity_x = self.velocity_x + self.ax * dt
+        self.velocity_y = self.velocity_y + self.ay * dt 
+        # y should technically be equal to zero type
+        self.velocity_z = self.velocity_z + self.az * dt
 
         # combines velocity into a scalar 
         self.velocity_scalar = self.velocity_x ** 2 + self.velocity_z ** 2
@@ -111,15 +122,15 @@ class ImuNode(Node):
         ############################## ATTITUDE ###############################
 
         # integrating angular velocity values
-        self.roll = self.roll + data.angular_velocity.x * dt
-        self.pitch = self.pitch + data.angular_velocity.y * dt
-        self.yaw = self.yaw + data.angular_velocity.z * dt
+        self.roll = self.roll + self.wx * dt
+        self.pitch = self.pitch + self.wy * dt
+        self.yaw = self.yaw + self.wz * dt
 
         # passing values into a complementary filter 
         at_x, at_y, at_z, _ = self.compf1_att.update( 
-                           data.linear_acceleration.x, data.linear_acceleration.y, data.linear_acceleration.z, 
-                           data.angular_velocity.x, data.angular_velocity.y, data.angular_velocity.z,
-                           0.0, 0.0, dt)
+                              self.ax, self.ay, self.az, 
+                              self.wx, self.wy, self.wz,
+                              0.0, 0.0, dt)
     
         # taking the values out of complementary filter and assigning them to the message data
         self.__attitude_message.x = at_x
@@ -131,7 +142,7 @@ class ImuNode(Node):
 
         ############################### POSE ####################################
         # x,y = x,z because y has the gravity acceleration in it for some reason
-        
+
         # integrating linear velocity values
         self.position_x = self.position_x + self.velocity_x * dt
         self.position_z = self.position_z + self.velocity_z * dt
@@ -143,12 +154,14 @@ class ImuNode(Node):
 
         new_my = (self.my * math.cos(self.roll))
         - (self.mz * math.sin(self.roll))
-
+    
         # passing theta into complementary filter
-        _, _, _, final_theta = self.compf1_att.update( 
+        _, _, _, final_theta = self.compf2_theta.update( 
                                             0.0, 0.0, 0.0,
                                             0.0, 0.0, 0.0,
                                             new_my, new_mx, dt)
+
+        # use lidar to fix position
 
         # assigning various values to message data
         self.__pose_est_message.x = self.kf2_posx.update(self.position_x)
@@ -169,6 +182,7 @@ def main():
     rclpy.init(args=None)
     node = ImuNode()
     rclpy.spin(node)
+
     node.destroy_node()
     rclpy.shutdown()
 
