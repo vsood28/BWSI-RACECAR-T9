@@ -9,10 +9,10 @@ import SLAMICP
 
 rc = racecar_core.create_racecar()
 
-KP = 1.0
-KD = 0.15
+KP = 0.7
+KD = 0.07
 
-GOAL = (10.0, 3.0)
+GOAL = (2.0,0.0)
 
 last_error = 0.0
 
@@ -46,7 +46,7 @@ def update():
     last_error = error
 
 
-    speed = 0.4
+    speed = 0.1
 
     rc.drive.set_speed_angle(speed, angle)
 
