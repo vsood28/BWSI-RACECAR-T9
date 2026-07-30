@@ -1,5 +1,5 @@
-import numpy as np
 import math
+import numpy as np
 from scipy.spatial import cKDTree
 
 last_points = None
@@ -17,23 +17,22 @@ def scan_to_points(scan_data):
     points = []
 
     num_samples = len(scan_data)
-    angle_increment = 360.0 / num_samples
+    angle_increment = 2.0 * math.pi / num_samples
 
     for i, dist in enumerate(scan_data):
-        # Convert cm -> meters
-        dist = dist / 100.0
+        dist /= 100.0  # cm to m
 
         if dist < 0.10 or dist > 10.0:
             continue
 
-        angle = math.radians(i * angle_increment)
+        angle = i * angle_increment
 
         x = dist * math.cos(angle)
         y = dist * math.sin(angle)
 
         points.append([x, y])
 
-    return np.array(points)
+    return np.asarray(points)
 
 
 def get_nearest_neighbors(source, target):
@@ -51,7 +50,7 @@ def best_fit_transform(A, B):
 
     H = AA.T @ BB
 
-    U, S, Vt = np.linalg.svd(H)
+    U, _, Vt = np.linalg.svd(H)
 
     R = Vt.T @ U.T
 
@@ -70,19 +69,19 @@ def icp(source, target, init_R=None, init_t=None):
 
     src = (R_total @ source.T).T + t_total
 
-    prev_error = None
+    prev_error = float("inf")
 
-    for iters in range(ICP_MAX_ITERS):
+    for _ in range(ICP_MAX_ITERS):
 
         dists, idx = get_nearest_neighbors(src, target)
 
-        inliers = dists < ICP_MAX_CORR_DIST
+        mask = dists < ICP_MAX_CORR_DIST
 
-        if np.count_nonzero(inliers) < ICP_MIN_MATCHES:
+        if np.count_nonzero(mask) < ICP_MIN_MATCHES:
             break
 
-        src_match = src[inliers]
-        tgt_match = target[idx[inliers]]
+        src_match = src[mask]
+        tgt_match = target[idx[mask]]
 
         R_step, t_step = best_fit_transform(src_match, tgt_match)
 
@@ -91,66 +90,83 @@ def icp(source, target, init_R=None, init_t=None):
         R_total = R_step @ R_total
         t_total = R_step @ t_total + t_step
 
-        mean_error = np.mean(dists[inliers])
+        error = np.mean(dists[mask])
 
-        if prev_error is not None and abs(prev_error - mean_error) < ICP_TOLERANCE:
+        if abs(prev_error - error) < ICP_TOLERANCE:
             break
 
-        prev_error = mean_error
+        prev_error = error
 
-    return R_total, t_total, mean_error, iters + 1
+    return R_total, t_total, prev_error
 
 
 def update(scan_data):
     global last_points, last_transform, state
 
     if scan_data is None:
-        return (0.0, 0.0, 0.0)
+        return
 
-    cur_points = scan_to_points(scan_data)
+    current = scan_to_points(scan_data)
 
     if (
         last_points is None
-        or len(cur_points) <= ICP_MIN_MATCHES
-        or len(last_points) <= ICP_MIN_MATCHES
+        or len(current) < ICP_MIN_MATCHES
+        or len(last_points) < ICP_MIN_MATCHES
     ):
-        last_points = cur_points
+        last_points = current
         last_transform = None
-        return (0.0, 0.0, 0.0)
+        return
 
-    init_R = last_transform[0] if last_transform is not None else None
-    init_t = last_transform[1] if last_transform is not None else None
+    init_R = None
+    init_t = None
 
-    R, t, mean_error, iters = icp(
-        cur_points,
+    if last_transform is not None:
+        init_R, init_t = last_transform
+
+    R, t, error = icp(
+        current,
         last_points,
         init_R,
         init_t,
     )
 
     last_transform = (R, t)
+    dtheta = math.atan2(R[1, 0], R[0, 0])
 
-    rotation_deg = math.degrees(math.atan2(R[1, 0], R[0, 0]))
 
-    heading = math.radians(state[2])
+    dx_robot = t[0]
+    dy_robot = t[1]
 
-    global_dx = t[0] * math.cos(heading) - t[1] * math.sin(heading)
-    global_dy = t[0] * math.sin(heading) + t[1] * math.cos(heading)
+    theta = state[2]
 
-    state[0] += global_dx
-    state[1] += global_dy
-    state[2] = (state[2] + rotation_deg) % 360
-
-    last_points = cur_points
-
-    print(
-        f"Pose: ({state[0]:.2f}, {state[1]:.2f}) "
-        f"Yaw={state[2]:.2f}°  "
-        f"Error={mean_error:.4f}"
+    dx_world = (
+        dx_robot * math.cos(theta)
+        - dy_robot * math.sin(theta)
     )
 
-    return global_dx, global_dy, rotation_deg
+    dy_world = (
+        dx_robot * math.sin(theta)
+        + dy_robot * math.cos(theta)
+    )
+
+    state[0] += dx_world
+    state[1] += dy_world
+    state[2] += dtheta
+
+    state[2] = math.atan2(
+        math.sin(state[2]),
+        math.cos(state[2])
+    )
+
+    last_points = current
+
+    print(
+        f"x={state[0]:.2f} "
+        f"y={state[1]:.2f} "
+        f"theta={math.degrees(state[2]):.1f}° "
+        f"err={error:.4f}"
+    )
 
 
 def get_pose():
-    return state
+    return tuple(state)
