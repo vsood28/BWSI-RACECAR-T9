@@ -2,24 +2,19 @@ import math
 import time
 
 class ComplementaryFilter:
-    def __init__(self, init_alpha, init_roll, init_pitch, init_yaw):
+    def __init__(self, init_alpha, init_roll, init_pitch):
         self.alpha = init_alpha
         self.roll = init_roll
         self.pitch = init_pitch
-        self.yaw = init_yaw
-        self.theta = 0.0
 
-    def update(self, ax, ay, az, wx, wy, wz, my, mx, dt): # accel, gyroscope (angular velocity), and magnetometer values
+    def update(self, ax, ay, az, wx, wy, dt): # accel, gyroscope (angular velocity)
         accel_roll = math.atan2(ay, az)
         accel_pitch = math.atan2(-ax, math.sqrt(ay**2 + az**2))
-        mag_yaw = math.atan2(my, mx)
         
         self.roll = self.alpha * (self.roll + wx * dt) + ((1 - self.alpha) * accel_roll)
         self.pitch = self.alpha * (self.pitch + wy * dt) + ((1 - self.alpha) * accel_pitch)
-        self.yaw = self.alpha * (self.yaw + wz * dt) + ((1-self.alpha) * mag_yaw)
-        self.theta = self.alpha * (self.theta + wy * dt) + ((1 - self.alpha) * theta_mag)
         
-        return self.roll, self.pitch, self.yaw, self.theta
+        return self.roll, self.pitch
 
 class KalmanFilter:
     # covar_est: covariable EST

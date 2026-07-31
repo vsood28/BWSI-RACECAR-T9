@@ -49,6 +49,8 @@ class ImuNode(Node):
         self.velocity_x = 0.0 
         self.velocity_y = 0.0           
         self.velocity_z = 0.0   
+        
+        self.velocity_vector = np.array([self.velocity_x, self.velocity_y, self.velocity_z])
 
         self.roll = 0.0
         self.pitch = 0.0
@@ -98,10 +100,10 @@ class ImuNode(Node):
         self.wz = data.angular_velocity.z - 0.02923
         
         self.ax = data.linear_acceleration.x - 0.00382
-        self.ay = data.linear_acceleration.y - 0.38592
+        self.ay = data.linear_acceleration.y - 0.38592 # needs to zero out gravity not go to 9.8
         self.az = data.linear_acceleration.z + 0.30102              
 
-        ############################## ATTITUDE ###############################
+        # attitude 
         
         # integrating angular velocity values
         self.roll = self.roll + self.wx * dt
@@ -109,14 +111,39 @@ class ImuNode(Node):
         self.yaw = self.yaw + self.wz * dt
         
         # passing values into a complementary filter 
-        at_x, at_y, at_z, _ = self.compf1_att.update( 
+        self.roll, self.pitch = self.compf1_att.update(
                               self.ax, self.ay, self.az, 
-                              self.wx, self.wy, self.wz,
-                              0.0, 0.0, dt)
+                              self.wx, self.wy, dt)
+
+        roll = np.array([
+                    [1, 0, 0],
+                    [0, math.cos(self.roll), -math.sin(self.roll)],
+                    [0, math.sin(self.roll), math.cos(self.roll)]
+                    ])  
+        pitch = np.array([
+                    [math.cos(self.pitch), 0, math.sin(self.pitch)],
+                    [0, 1, 0],
+                    [-math.sin(self.pitch), 0, math.cos(self.pitch)]
+                    ])
+        yaw = np.array([
+                    [math.cos(self.yaw), -math.sin(self.yaw), 0],
+                    [math.sin(self.yaw), math.cos(self.yaw), 0],
+                    [0, 0, 1]
+                    ])  
+
+        # rotating acceleration into the world frame
+        rotation = yaw @ pitch @ roll
+        acceleration = np.array([self.ax, self.ay, self.az])
+        self.new_accel = rotation @ acceleration
+
+        # integrating velocity but like. as vector components
+        self.velocity_vector[0] = [self.velocity_x + acceleration[0], 
+                                   self.velocity_y,
+                                   self.velocity_z]
             
-        self.__attitude_message.x = at_x
-        self.__attitude_message.y = at_y
-        self.__attitude_message.z = at_z
+        # self.__attitude_message.x = at_x
+        # self.__attitude_message.y = at_y
+        # self.__attitude_message.z = at_z
         
         ########################## LINEAR VELOCITY ##########################
 
