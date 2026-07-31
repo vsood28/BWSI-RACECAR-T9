@@ -4,6 +4,8 @@ from std_msgs.msg import Header
 import numpy as np
 import math
 
+#units of meters, radians,  and logodds
+
 def bayesian_update(prev_odds, mea_odds, prior_odds):
     return prev_odds + mea_odds - prior_odds
 

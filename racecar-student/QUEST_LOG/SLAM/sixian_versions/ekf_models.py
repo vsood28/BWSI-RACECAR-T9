@@ -2,6 +2,8 @@ import yaml
 import math
 import numpy as np
 
+#units of this file: x, y in meters, theta in rads, v in m/s, sigma in rads
+
 with open("model_config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
@@ -38,7 +40,7 @@ def process_noise_jacobian(state_estimate, control_input, delta_t, **kwargs): #x
 def state_model(state_estimate, control_input, delta_t, **kwargs):
     x, y, theta = state_estimate #gives effect of process noise. since noise enters through controls exclusively in this model, control jacobian is not needed
     v, sigma = control_input
-    L = kwargs.get('wheelbase', config['wheelbase'])
+    L = kwargs.get('wheelbase', config['wheelbase']) #0.20
 
     return np.array([
         x + v * math.sin(theta) * delta_t,
@@ -49,5 +51,8 @@ def state_model(state_estimate, control_input, delta_t, **kwargs):
 def measurement_model(state_estimate, delta_time, **kwargs): #maps state to predicted measurement
     return state_estimate[:3]
 
-def steering_model(time, control_angle):
-      return -0.014176 + ((0.373024 * control_angle) + 0.070863) / (1 + np.exp(-28.856830 * (time - 0.092375)))
+def steering_model(control_angle):
+    return 0.53 * control_angle #effect of steering mechanism on control
+
+def velocity_model(ang_vel, w_rad):
+    return ang_vel * config['wheel_radius'] #0.04 

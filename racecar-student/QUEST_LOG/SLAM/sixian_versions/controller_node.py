@@ -145,11 +145,6 @@ class SLAMController(Node):
 
         self.drive_pub.publish(drive_msg)
 
-        # dummy motor command for now
-        motor_msg = Float32()
-        motor_msg.data = self.base_speed
-        self.motor_pub.publish(motor_msg)
-
     def _publish_stop(self):
         drive_msg = AckermannDriveStamped()
         drive_msg.header.stamp = self.get_clock().now().to_msg()

@@ -11,6 +11,10 @@ from occupancy_grid import OccupancyGrid as OG
 from datetime import datetime
 from slam_icp import ICPScanMatcher
 
+from ekf_models import steering_model, velocity_model
+
+#units of meters (from lidar), angular velocity (rads) for encoder,  
+
 class StateEstimationNode(Node):
     def __init__(self, initial_state, initial_covariance, models, jacobians, grid_params, grid_odds, sys_params, publish_rate=10.0):
         super().__init__('state_estimator')
