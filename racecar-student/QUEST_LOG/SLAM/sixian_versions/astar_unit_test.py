@@ -191,11 +191,12 @@ def test_path_around_obstacle_wall():
             y,
         )
 
+        print(gx, gy)
+
         assert (
             gx,
             gy,
         ) not in obstacles
-
 
 def test_no_path_when_blocked():
     """

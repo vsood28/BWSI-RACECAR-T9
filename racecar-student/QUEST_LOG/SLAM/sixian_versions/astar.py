@@ -1,12 +1,11 @@
 import heapq
 import math
 
-#from nav_msgs.msg import OccupancyGrid #comment out if unit test
+from nav_msgs.msg import OccupancyGrid #comment out if unit test
 
 ''' 
 class OccupancyGrid:  #dummy to stop error for unit test outside of ros
-    pass
-    
+    pass   
 '''
 
 class AStarPlanner:

@@ -6,18 +6,18 @@ class ExtendedKalmanFilter:
                  initial_state_covariance,
                  process_noise_covariance,
                  measurement_noise_covariance,
-                 state_transistion_jacobian,
+                 state_transition_jacobian,
                  measurement_jacobian,
                  process_noise_jacobian,
                  state_model,
                  measurement_model): #last 5 are funcs
 
-        self.state_estimate = initial_state_estimate
+        self.state_estimate = initial_state_estimate.copy()
         self.state_estimation_covariance = initial_state_covariance
         self.process_noise_covariance = process_noise_covariance
         self.measurement_noise_covariance = measurement_noise_covariance
 
-        self.state_transistion_jacobian = state_transistion_jacobian
+        self.state_transition_jacobian = state_transition_jacobian
         self.measurement_jacobian = measurement_jacobian
         self.process_noise_jacobian = process_noise_jacobian
 
@@ -27,9 +27,9 @@ class ExtendedKalmanFilter:
         self.kalman_gain = None
 
     def predict_state(self, control_input, delta_t, **kwargs): #encoder update
-        self.state_estimate += self.state_model(self.state_estimate, control_input, delta_t, **kwargs) #update predicted state
+        self.state_estimate = self.state_model(self.state_estimate, control_input, delta_t, **kwargs) #update predicted state
 
-        F = self.state_transistion_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
+        F = self.state_transition_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
         P = self.state_estimation_covariance
         Q = self.process_noise_covariance
         G = self.process_noise_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
@@ -46,8 +46,8 @@ class ExtendedKalmanFilter:
         I = np.identity(len(self.state_estimate))
 
         S = H @ P @ H.T + R #innovation covariance: basically, hpht is uncertainty of state translated into uncertainty of measurement, R, is uncertainty due to sensor noise, sum is "measurement error" (not exactly, close enough)
-        self.kalman_gain = P @ H.T @ np.linalg.inv(S) # pht translates from "how wrong is my measurement" (innovation, or S) to how states are affeced by how wrong the measruement is
-
+        self.kalman_gain = np.linalg.solve(S.T, H @ P).T # pht translates from "how wrong is my measurement" (innovation, or S) to how states are affeced by how wrong the measruement is
+        # equiv to P @ H.T @ np.linalg.inv(S) but faster or smtg idk
         self.state_estimate += self.kalman_gain @ innovation
 
         L = (I - self.kalman_gain @ H)
