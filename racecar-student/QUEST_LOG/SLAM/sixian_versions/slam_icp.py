@@ -180,7 +180,7 @@ class ICPScanMatcher:
 
         new_x = self.state.x + dx * cos_t - dy * sin_t
         new_y = self.state.y + dx * sin_t + dy * cos_t
-        new_theta = self._normalize_angle(theta + dtheta)
+        new_theta = self._normalize_angle(theta - dtheta)
 
         self.state = Pose(new_x, new_y, new_theta)
 

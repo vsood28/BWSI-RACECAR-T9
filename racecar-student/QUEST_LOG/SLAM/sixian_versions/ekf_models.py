@@ -32,7 +32,7 @@ def process_noise_jacobian(state_estimate, control_input, delta_t, **kwargs): #x
     L = kwargs.get('wheelbase', config['wheelbase'])
 
     return np.array([
-        [math.cos(theta) * delta_t, 0], #derivative of control model + noise (sub v -> v + v_noise, theta -> theta + theta_noise)
+        [math.cos(theta) * delta_t, 0], #derivative of control model + noise (sub v -> v + v_noise, theta -> theta + theta_noise) w/respect to cotnrol
         [math.sin(theta) * delta_t, 0],
         [math.tan(sigma)/L * delta_t, 0]
     ])

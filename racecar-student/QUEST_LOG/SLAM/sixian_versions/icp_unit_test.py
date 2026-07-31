@@ -296,7 +296,7 @@ def test_update_pose_estimate_matches_motion():
 
     R_inv = R.T
     t_inv = -R_inv @ t
-    theta_inv = -theta
+    theta_inv = theta #since robot theta is flipped, +theta in cw instead of ccw, so +theta from coordinate plane equal and opposite = +theta  robot plane
 
     assert pose.x == pytest.approx(t_inv[0], abs=0.03)
     assert pose.y == pytest.approx(t_inv[1], abs=0.03)

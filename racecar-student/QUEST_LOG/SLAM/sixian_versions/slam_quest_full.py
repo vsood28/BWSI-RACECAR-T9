@@ -16,6 +16,23 @@ GOAL_XY = (2.0, 1.0)  # meters, in map frame
 def main(args=None):
     ros2.init(args=args)
 
+    covariance = {
+        "sc": np.array([
+            [1, 0, 0], #1 m covariance
+            [0, 1, 0],
+            [0, 0, 0.5]
+        ]),
+        "mc": np.array([
+            [2.5e-5, 0, 0], #1/2 cm covariance in measured state
+            [0, 2.5e-5, 0],
+            [0, 0, 0.0001] #0.01 rads or ~ 1/2 deg covariance in measured state (angle)
+        ]),
+        "pc": np.array([
+            [0.0025, 0], #5 cm/s covariance in velocity
+            [0, 0.0025], # 0.05 rads covariance (3*) in angle
+        ]),
+    }
+
     jacobians = {"st": state_transistion_jacobian, "me": measurement_jacobian, "pr": process_noise_jacobian}
 
     models = {"st": state_model, "me": measurement_model}
@@ -28,11 +45,7 @@ def main(args=None):
 
     se_node = StateEstimationNode(
         np.array([0.0, 0.0, 0.0]),
-        np.array([
-            [1, 0, 0],
-            [0, 1, 0],
-            [0, 0, 0.5]
-        ]),
+        covariance,
         models,
         jacobians,
         grid_params,
