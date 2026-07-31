@@ -8,7 +8,7 @@ from nav_msgs.msg import OccupancyGrid
 from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import Float32
 
-from astar_planner import AStarPlanner
+from astar import AStarPlanner
 
 
 class PID:  # pid class very simple
@@ -147,7 +147,7 @@ class SLAMController(Node):
 
         # dummy motor command for now
         motor_msg = Float32()
-        motor_msg.data = 0.5
+        motor_msg.data = self.base_speed
         self.motor_pub.publish(motor_msg)
 
     def _publish_stop(self):
