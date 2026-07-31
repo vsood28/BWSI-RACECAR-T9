@@ -43,29 +43,35 @@ def update():
     angle = rc_utils.clamp(angle, -1, 1)
     speed = 0.5
     rc.drive.set_speed_angle(speed, angle)
-    
+
+# how to deal with zeroes?    
+
 def get_error(scan):
     n = len(scan)
+    scan = scan.copy()
     left = 0
     right = 0
     left_idx = 0
     right_idx = 0
     for i in range(-n//4, 0):
-        dist = scan[i]
-        if dist > left:
-            left = dist
-            left_idx = i
+        if scan[i] != 0:
+            scan[i] = rc_utils.get_lidar_average_distance(scan, i, 20)
+            dist = scan[i]
+            if dist > left:
+                left = dist
+                left_idx = i
     for i in range(0, n //4):
-        dist = scan[i]
-        if dist > right:
-            right = dist
-            right_idx = i
+        if scan[i] != 0:
+            scan[i] = rc_utils.get_lidar_average_distance(scan, i, 20)
+            dist = scan[i]
+            if dist > right:
+                right = dist
+                right_idx = i
     lw, rw = weight(left, right)
     mid_idx = right_idx * rw + left_idx * lw
     if mid_idx > 90:
         mid_idx -= 360
     return mid_idx        
-                    
 
 def weight(l, r):
     return l / (l + r), r / (l + r)
