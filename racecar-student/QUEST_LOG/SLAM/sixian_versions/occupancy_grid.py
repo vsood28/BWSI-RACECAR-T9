@@ -1,8 +1,51 @@
-from nav_msgs.msg import OccupancyGrid as ROSOccupancyGrid
-from geometry_msgs.msg import Pose
-from std_msgs.msg import Header
+from nav_msgs.msg import OccupancyGrid as ROSOccupancyGrid #comment out for unittest
 import numpy as np
 import math
+
+'''
+from dataclasses import dataclass, field #fake class for unit test outside of ros
+
+@dataclass
+class Header:
+    frame_id: str = ""
+    stamp = None
+
+
+@dataclass
+class Position:
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+
+
+@dataclass
+class Orientation:
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+    w: float = 1.0
+
+
+@dataclass
+class Pose:
+    position: Position = field(default_factory=Position)
+    orientation: Orientation = field(default_factory=Orientation)
+
+
+@dataclass
+class MapMetaData:
+    resolution: float = 0.0
+    width: int = 0
+    height: int = 0
+    origin: Pose = field(default_factory=Pose)
+
+
+@dataclass
+class ROSOccupancyGrid:
+    header: Header = field(default_factory=Header)
+    info: MapMetaData = field(default_factory=MapMetaData)
+    data: list[int] = field(default_factory=list)
+'''
 
 #units of meters, radians,  and logodds
 
@@ -57,7 +100,7 @@ class OccupancyGrid:
         self.prior_odds = log_odds(prior_odds)
         self.prob_occ_hit = log_odds(poh)
         self.prob_occ_miss = log_odds(pom)
-        self.grid = np.full((width, height), prior_odds, dtype=np.float64)
+        self.grid = np.full((width, height), log_odds(prior_odds), dtype=np.float64)
 
     def to_ros_occupancy_grid(
         self,
@@ -65,7 +108,7 @@ class OccupancyGrid:
         origin_x=0.0,
         origin_y=0.0,
         stamp=None,
-        unknown_threshold=0.5
+        unknown_threshold=0.1 #min differnce from prior odds required to acutally be considered to be confidently one or the other
     ):
         """
         Convert the internal log-odds occupancy grid to a ROS 2

@@ -1,9 +1,12 @@
 import rclpy as ros2
 import numpy as np
 
-from slam_node import StateEstimationNode
+from se_node import StateEstimationNode
+from controller_node import SLAMController
 
-from ekf_models import state_transistion_jacobian, process_noise_jacobian, measurement_jacobian, state_model, measurement_model, control_model
+#spin up both se and control block for full system loop
+
+from ekf_models import state_transistion_jacobian, process_noise_jacobian, measurement_jacobian, state_model, measurement_model
 
 def main(args=None):
     ros2.init(args=args)
