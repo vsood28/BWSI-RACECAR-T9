@@ -172,29 +172,20 @@ class ICPScanMatcher:
 
         self.last_transform = (R, t)
 
-        # ICP gives: p_previous = R @ p_current + t
-        # Invert to get robot motion (previous-frame -> current-frame):
-        R_motion = R.T
-        t_motion = -R.T @ t
+        dtheta = math.atan2(R[1, 0], R[0, 0])
+        dx, dy = t[0], t[1]
 
-        rotation = math.atan2(R_motion[1, 0], R_motion[0, 0])
+        theta = self.state.theta
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
 
-        heading = self.state.theta  # already radians, no conversion needed
+        new_x = self.state.x + dx * cos_t - dy * sin_t
+        new_y = self.state.y + dx * sin_t + dy * cos_t
+        new_theta = self._normalize_angle(theta + dtheta)
 
-        global_dx = t_motion[0] * math.cos(heading) - t_motion[1] * math.sin(heading)
-        global_dy = t_motion[0] * math.sin(heading) + t_motion[1] * math.cos(heading)
-
-        self.state.x += global_dx
-        self.state.y += global_dy
-        self.state.theta = self._normalize_angle(self.state.theta + rotation)
-
-        print(
-            f"Pose: ({self.state.x:.2f}, {self.state.y:.2f}) "
-            f"Yaw={math.degrees(self.state.theta):.2f}°  "
-            f"Error={mean_error:.4f}  Iters={iters}"
-        )
+        self.state = Pose(new_x, new_y, new_theta)
 
         return self.state
+
 
     def get_pose(self):
         return self.state
