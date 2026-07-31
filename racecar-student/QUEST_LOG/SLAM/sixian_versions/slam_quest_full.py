@@ -18,9 +18,9 @@ def main(args=None):
 
     covariance = {
         "sc": np.array([
-            [1, 0, 0], #1 m covariance
-            [0, 1, 0],
-            [0, 0, 0.5]
+            [0.25, 0, 0], #0.5 m covariance
+            [0, 0.25, 0], #0.5 m covaraince
+            [0, 0, 0.2] #25 deg covariance
         ]),
         "mc": np.array([
             [2.5e-5, 0, 0], #1/2 cm covariance in measured state
