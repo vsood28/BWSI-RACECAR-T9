@@ -12,16 +12,20 @@ import numpy as np # maybe unnecessary?
 rc = racecar_core.create_racecar()
 
 BIG = 99999
-WINDOW_LEN = 12 # 3 degrees 
+WINDOW_LEN = 16 # 8 degrees in each direction
 
 speed = 1
 angle = 0
 
 largest_l = 0
-window_l = []
+index_l = 270
+scan_l = []
+# window_l = []
 
 largest_r = 0
-window_r = []
+index_r = 0
+scan_r = []
+# window_r = []
 
 # Functions
 def start():    
@@ -38,46 +42,44 @@ def update():
 
 def updateLargest():
     global largest_l, largest_r
-    global window_l, window_r
+    global index_l, index_r
+    global scan_l, scan_r
+    # global window_l, window_r
 
     scan = rc.lidar.get_samples() # 1080 points
     num = rc.lidar.get_num_samples() # 1080
 
     temp = []
-    for i in range (-num//4, -num//4 + WINDOW_LEN):
-        temp.append(i)
-    window_l.extend(temp)
+    for i in range (-num//4, -num//4 + WINDOW_LEN): # add 270 - 273 degrees to the window (12 values)
+        if scan[i] == 0:
+            scan_l[i] = BIG
+
+        temp.append(scan[i])
+    window_l.extend(temp) 
 
     temp.clear()
-    for i in range (0, WINDOW_LEN):
-        temp.append(i)
+    for i in range (0, WINDOW_LEN): # add 0 - 3 degrees to the window (12 values)
+        if scan[i] == 0:
+            scan_r[i] = BIG
+
+        temp.append(scan[i])
     window_r.extend(temp)
+    # temp should get garbage collected
 
     for i in range (-num//4 + WINDOW_LEN + 1, 0): # 270 to 360 degrees of the lidar scan
-            scan_l = scan
+            scan_l = scan # this is probably inefficient
             if scan_l[i] == 0:
                 scan_l[i] = BIG
-    
-            if 
-            # i acc dont know how to implement this uhhhhhhhhhhhhhh
 
-             if start > end:
-                sScan = np.append(scan[start:], scan[:end + 1])
-            else:
-                sScan = scan[start:end + 1]
-
-            if scan[i] <= LOOKAHEAD_DIST and scan[i] >= largest: # average distance of every x points into _ and then nyoom
-                startpos = i - len
-                len = len + 1
-                if len > largest_len:
-                    largest_len = len
+            val = rc_utils.get_lidar_average_distance(scan_l, i, WINDOW_LEN)
+            
+            if val > largest_l:
+                
     
             center = (startpos + (startpos + largest_len)) / 2
     
     for i in range (WINDOW_LEN + 1, num//4 - WINDOW_LEN): # 0 to 90 degrees of the lidar scan
-
-
-        
+        pass
 
 
 def setAngle(distance):
