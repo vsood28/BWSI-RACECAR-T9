@@ -10,6 +10,7 @@ from std_msgs.msg import Float32
 
 from astar import AStarPlanner
 
+#units of meters for grid resolution
 
 class PID:  # pid class very simple
     def __init__(self, kP=0, kI=0, kD=0):
@@ -64,7 +65,6 @@ class SLAMController(Node):
         )
 
         self.drive_pub = self.create_publisher(AckermannDriveStamped, '/drive', 10)
-        self.motor_pub = self.create_publisher(Float32, '/motor', 10)
 
         self.goal_xy = goal_xy
         self.lookahead_cells = lookahead_cells
@@ -83,11 +83,11 @@ class SLAMController(Node):
             self.control_loop
         )
 
-    def pose_callback(self, msg):
-        self.current_pose = msg
+    def pose_callback(self, data):
+        self.current_pose = data
 
-    def map_callback(self, msg):
-        self.current_map = msg
+    def map_callback(self, data):
+        self.current_map = data
 
     def _get_lookahead_target(self, path): #walk lookahead along planned path
         idx = min(self.lookahead_cells, len(path) - 1)
@@ -151,7 +151,3 @@ class SLAMController(Node):
         drive_msg.drive.steering_angle = 0.0
         drive_msg.drive.speed = 0.0
         self.drive_pub.publish(drive_msg)
-
-        motor_msg = Float32()
-        motor_msg.data = 0.5
-        self.motor_pub.publish(motor_msg)

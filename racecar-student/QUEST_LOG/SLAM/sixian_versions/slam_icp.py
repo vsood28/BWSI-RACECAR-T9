@@ -143,20 +143,7 @@ class ICPScanMatcher:
 
     # ---------- public API ----------
 
-    def update(self, scan_data, angle_min=-math.pi, angle_increment=None):
-        """
-        Feed in a new scan. Updates internal pose estimate and returns
-        the current Pose.
-        """
-        if scan_data is None:
-            return self.state
-
-        cur_points = self.scan_to_points(
-            scan_data,
-            angle_min=angle_min,
-            angle_increment=angle_increment,
-        )
-
+    def update(self, cur_points):
         if (
             self.last_points is None
             or len(cur_points) <= self.ICP_MIN_MATCHES

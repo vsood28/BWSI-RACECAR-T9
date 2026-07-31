@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from EKF import ExtendedKalmanFilter
+from ekf import ExtendedKalmanFilter
 
 
 # ============================================================
@@ -10,7 +10,7 @@ from EKF import ExtendedKalmanFilter
 # State:
 #   x = position
 #
-# Dynamics:
+# Dynamics:ekf
 #   x(k+1) = x(k) + u*dt
 #
 # Measurement:

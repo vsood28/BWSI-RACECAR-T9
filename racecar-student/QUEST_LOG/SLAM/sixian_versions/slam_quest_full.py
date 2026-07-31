@@ -12,7 +12,7 @@ def main(args=None):
 
     models = {"st":state_model, "me":measurement_model}
 
-    grid_params = {"w": 10, "h": 12, "res": 0.05}
+    grid_params = {"w": 200, "h": 360, "res": 0.05} #10m by 18 m
 
     grid_odds = {"po": 0.5, "poh": 0.8, "pom": 0.2}
 

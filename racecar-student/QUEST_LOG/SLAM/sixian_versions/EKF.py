@@ -12,7 +12,7 @@ class ExtendedKalmanFilter:
                  state_model,
                  measurement_model): #last 5 are funcs
 
-        self.state_estimate = initial_state_estimate.copy()
+        self.state_estimate = initial_state_estimate.copy() #np arr [x, y, theta]
         self.state_estimation_covariance = initial_state_covariance.copy()
         self.process_noise_covariance = process_noise_covariance
         self.measurement_noise_covariance = measurement_noise_covariance

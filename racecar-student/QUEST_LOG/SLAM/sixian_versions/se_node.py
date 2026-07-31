@@ -5,15 +5,40 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Pose2D
 from nav_msgs.msg import OccupancyGrid
-from EKF import ExtendedKalmanFilter
+from sensor_msgs.msg import LaserScan
+from ekf import ExtendedKalmanFilter
 from slam import SLAM
 from occupancy_grid import OccupancyGrid as OG
 from datetime import datetime
 from slam_icp import ICPScanMatcher
+import numpy as np
 
 from ekf_models import steering_model, velocity_model
 
 #units of meters (from lidar), angular velocity (rads) for encoder,  
+
+
+
+def laserscan_to_points(scan_msg: LaserScan) -> np.ndarray: #helper
+    ranges = np.asarray(scan_msg.ranges, dtype=np.float32)
+
+    # Compute the angle for every beam
+    angles = scan_msg.angle_min + np.arange(len(ranges)) * scan_msg.angle_increment
+
+    # Keep only valid measurements
+    valid = (
+        np.isfinite(ranges)
+        & (ranges >= scan_msg.range_min)
+        & (ranges <= scan_msg.range_max)
+    )
+
+    ranges = ranges[valid]
+    angles = angles[valid]
+
+    x = ranges * np.cos(angles)
+    y = ranges * np.sin(angles)
+
+    return np.column_stack((x, y))
 
 class StateEstimationNode(Node):
     def __init__(self, initial_state, initial_covariance, models, jacobians, grid_params, grid_odds, sys_params, publish_rate=10.0):
@@ -84,48 +109,47 @@ class StateEstimationNode(Node):
         self.last_measure_callback = datetime.now()
         self.last_estimate_callback = datetime.now()
 
-    def measure_callback(self, data):
+    def measure_callback(self, data): #run when lidar measurement (accurate) comes in
         now = datetime.now()
 
-        dt = (now - self.last_measure_callback).total_seconds()
+        dt = (now - self.last_measure_callback).total_seconds() #get dt
         self.last_measure_callback = now
 
-        pose = self.icp.update(
-            data.ranges,
-            angle_min=data.angle_min,
-            angle_increment=data.angle_increment,
-            range_min=data.range_min,
-            range_max=data.range_max
-        )
+        point_cloud = laserscan_to_points(data) #turn to useful pointcloud instaed of noisy lidar data
 
-        self.slam.measurement_callback(
+        pose = self.icp.update(point_cloud) #get icp pose 
+
+        self.slam.measurement_callback( #update everything based on measurement 
             pose.to_array(),
             dt,
         )
 
-    def estimate_callback(self, data):
-        v = float(data.data)
-        omega = float(self.angle_cache)
+        self.slam.update_occupancy_grid(point_cloud, self.slam.get_state_estimate()) #use pointcloud to update, as well as current pose
+
+    def estimate_callback(self, data): #run when encoder data comes in
+        v = velocity_model(float(data.data)) #convert from angular to linear
+        omega = float(self.angle_cache) #read from steering angle chache
 
         now = datetime.now()
 
-        dt = (now - self.last_estimate_callback).total_seconds()
+        dt = (now - self.last_estimate_callback).total_seconds() #get delta_t
+        self.last_estimate_callback = now
 
-        self.slam.estimate_callback(
+        self.slam.estimate_callback( #slam runs its estiamte callback
             (v, omega),
             dt,
         )
 
-        self.last_estimate_callback = now
+        
 
     def servo_callback(self, data):
-        self.angle_cache = float(data.drive.steering_angle)
+        self.angle_cache = steering_model(float(data.drive.steering_angle))
 
-    def get_map_estiamte(self):
+    def get_map_estimate(self):
         return self.slam.occupancy_grid.to_ros_occupancy_grid(frame_id="map", origin_x=0.0, origin_y=0.0, stamp=self.get_clock().now().to_msg())
 
     def get_state_estimate(self):
-        state = self.slam.ekf.state
+        state = self.slam.get_state_estimate()
 
         x = float(state[0])
         y = float(state[1])
@@ -140,4 +164,4 @@ class StateEstimationNode(Node):
 
     def publish_state_estimate(self):
         self.pose_pub.publish(self.get_state_estimate())
-        self.map_pub.publish(self.get_map_estiamte())
+        self.map_pub.publish(self.get_map_estimate())

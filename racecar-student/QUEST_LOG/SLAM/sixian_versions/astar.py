@@ -25,7 +25,7 @@ class AStarPlanner:
 
     def __init__(
         self,
-        occupancy_grid: OccupancyGrid,
+        occupancy_grid: OccupancyGrid, #direclty read from ros2 occupancy grid message
         obstacle_threshold: int = 60,
         allow_unknown: bool = False,
     ):

@@ -112,7 +112,7 @@ class OccupancyGrid:
         msg.info.origin.orientation.w = 1.0
 
         # Convert log-odds to probabilities.
-        probabilities = 1.0 / (1.0 + np.exp(-self.grid))
+        probabilities = 1.0 / (1.0 + np.exp(-self.grid)) #cant use other since this is using vectorizatio
 
         # Convert probabilities from [0, 1] to ROS occupancy [0, 100].
         occupancy = np.rint(probabilities * 100.0).astype(np.int8)
@@ -152,11 +152,11 @@ class OccupancyGrid:
 
         for cell in empty:
             x, y = cell
-            self.grid[x][y] = bayesian_update(self.grid[x][y], self.prob_occ_miss, self.prior_odds)
+            self.grid[x][y] = bayesian_update(self.grid[x][y], self.prob_occ_miss, self.prior_odds) #update each empty cell 
 
         for cell in hit:
             x, y = cell
-            self.grid[x][y] = bayesian_update(self.grid[x][y], self.prob_occ_hit, self.prior_odds)
+            self.grid[x][y] = bayesian_update(self.grid[x][y], self.prob_occ_hit, self.prior_odds) #update each hit cell
 
     def world_to_grid(self, x, y):
         return int(x // self.resolution), int(y // self.resolution)
