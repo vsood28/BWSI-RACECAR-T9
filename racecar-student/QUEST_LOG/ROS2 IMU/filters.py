@@ -2,27 +2,21 @@ import math
 import time
 
 class ComplementaryFilter:
-    def __init__(self, init_alpha, init_roll, init_pitch, init_yaw):
+    def __init__(self, init_alpha, init_roll, init_pitch):
         self.alpha = init_alpha
         self.roll = init_roll
         self.pitch = init_pitch
-        self.yaw = init_yaw
-        self.theta = 0.0
 
-    def update(self, ax, ay, az, wx, wy, wz, my, mx, dt): # accel, gyroscope (angular velocity), and magnetometer values
-        accel_roll = math.atan2(ay, az) 
+    def update(self, ax, ay, az, wx, wy, dt): # accel, gyroscope (angular velocity)
+        accel_roll = math.atan2(ay, az)
         accel_pitch = math.atan2(-ax, math.sqrt(ay**2 + az**2))
-        theta_mag = math.atan2(my, mx) # axis convention could be off
         
         self.roll = self.alpha * (self.roll + wx * dt) + ((1 - self.alpha) * accel_roll)
         self.pitch = self.alpha * (self.pitch + wy * dt) + ((1 - self.alpha) * accel_pitch)
-        self.yaw = self.alpha * (self.yaw + wz * dt) # i think the second term is removed because accelerometer would give 0?
-        self.theta = self.alpha * (self.theta + wy * dt) + ((1 - self.alpha) * theta_mag)
         
-        return self.roll, self.pitch, self.yaw, self.theta
+        return self.roll, self.pitch
 
 class KalmanFilter:
-    # i hate this system
     # covar_est: covariable EST
     # covar_mea: covariable MEA
     # n: x subscript n, estimate for the robot (in this case, mean)

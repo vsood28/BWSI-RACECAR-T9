@@ -13,9 +13,8 @@ class Position:
         return np.array([self.x, self.y])
     
     def to_absolute(self, reference_pose):
-        """Convert this local position into the global frame defined by reference_pose."""
-        c = math.cos(reference_pose.dir)
-        s = math.sin(reference_pose.dir)
+        c = math.cos(reference_pose.theta)
+        s = math.sin(reference_pose.theta)
 
         x = reference_pose.x + self.x * c - self.y * s,
         y = reference_pose.y + self.x * s + self.y * c,
@@ -70,13 +69,13 @@ class Pose:
     def __init__(self, x=0, y=0, dir=0):
         self.x = x
         self.y = y
-        self.dir = dir
+        self.theta = dir
 
     def to_position(self):
         return Position(self.x, self.y)
 
     def to_array(self):
-        return np.array([self.x, self.y, self.dir])
+        return np.array([self.x, self.y, self.theta])
 
     # Pose + Pose
     def __add__(self, other):
@@ -84,7 +83,7 @@ class Pose:
             return Pose(
                 self.x + other.x,
                 self.y + other.y,
-                self.dir + other.dir,
+                self.theta + other.theta,
             )
         return NotImplemented
 
@@ -94,9 +93,9 @@ class Pose:
             return Pose(
                 self.x - other.x,
                 self.y - other.y,
-                self.dir - other.dir,
+                self.theta - other.theta,
             )
         return NotImplemented
 
     def __repr__(self):
-        return f"Pose(x={self.x}, y={self.y}, dir={self.dir})"
+        return f"Pose(x={self.x}, y={self.y}, dir={self.theta})"

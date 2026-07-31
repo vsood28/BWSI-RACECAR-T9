@@ -1,5 +1,4 @@
-from ftg_func import angle_to 
-from ftg_func import tar_ang, farthest_gap
+from cs_func import find_cones, target_point, angle_to_target, min_scan, closest_cone
 import time
 
 import sys
@@ -45,11 +44,12 @@ class PID: #pid class very simple
 
         return p + self.cum_i_val + d  #p + i + d
 
-global angle
 angle = 0.0
 
-global error
 error = 0.0
+
+prev_close = None
+side = True
 
 KP = 1.3
 KD = 0.0
@@ -57,7 +57,7 @@ KD = 0.0
 KPS = 0.002
 KDS = 0
 
-SPEED_BASELINE = 100 #speed baseline for beginning speed control
+CONE_JUMP = 50
 
 steering_pid = PID(kP=KP, kD=KD) #steering kp
 speed_pid = PID(kP=KPS, kD=KDS) #speed kp
@@ -74,44 +74,61 @@ def start():
 
     rc.set_update_slow_time(0.33)
 
-tmp = None #var for display
+window = 10
 
 def update():
-    global angle, error, speed, tmp
+    global angle, error, speed, side, prev_close
 
-    lg = farthest_gap(rc.lidar) #get farthest gap
-    tmp = lg
-    error = tar_ang(rc.lidar.get_samples(), rc.lidar.get_num_samples(), lg) #error using tar ang function given frathest gap and lidar
+    cn = find_cones(rc.lidar, 12, CONE_JUMP)
 
+    closest = closest_cone(cn)
+
+    smp = rc.lidar.get_samples()
+    n = rc.lidar.get_num_samples()
+
+    r = min_scan(smp, n//4, window)
+
+    l = min_scan(smp, -n//4, window)
+
+    print(f"{l}, {r}")
+    #
+    if (side and l != 0 and l < 60) or (not side and r != 0 and r < 60)    :
+        side = not side
+        print("flip")
+
+    target = target_point(closest, side, 40)
+
+    error = angle_to_target(target) #lookahead target
+
+    s = rc.lidar.get_samples()
+
+    i, d = rc_utils.get_lidar_closest_point(s, (-120, 120))
+
+    
     angle = steering_pid.tick(0, error) #tar angel from steering angle
 
     angle = rc_utils.clamp(angle, -1, 1) #clamp
 
-    smp = rc.lidar.get_samples()
+    speed_error = min(abs(math.pi/2 - error), abs(-math.pi/2 - error)) #redefine it to be inversely related to angle needed to turn, greater angle (closer to 90* is slower)
 
-    l = smp[0]
+    speed = speed_pid.tick(0, speed_error) #speed pid
 
-    #l  = sum(smp[-2:] + smp[:2] - smp[0]) / 3
-
-    if l == 0: #actually inf
-        l = 99999999
-
-    speed = speed_pid.tick(SPEED_BASELINE, l) #speed pid
     speed = rc_utils.clamp(speed, 0.1, 1) #dont stop (believin')
 
+    rc.drive.set_speed_angle(speed, angle) #set
 
-    #rc.drive.set_speed_angle(speed, angle) #set
+import matplotlib.pyplot as plt
 
+def display_pts(pts, f_name="pts"):
+    plt.figure()
+    x = [pt.x for pt in pts]
+    y = [pt.y for pt in pts]
+
+    plt.scatter(x, y, 0.4)
+    plt.savefig(f"{f_name}.png")
 
 def update_slow():
-    global start_time
-    global angle, speed
-    global error
-
-    elapsed = time.time() - start_time
-
-    print(f"car Angle: {angle}, speed: {speed} Error: {error * 180/math.pi}, lg:{tmp}") #print
-
+    pass
 
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)

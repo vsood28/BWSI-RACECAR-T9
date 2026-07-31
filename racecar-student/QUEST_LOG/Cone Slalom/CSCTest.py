@@ -13,7 +13,8 @@ import importlib
 rc = racecar_core.create_racecar()     
 
 MAX_TURN_BACK_SECONDS = 2.5
-SPED = 1 
+SPED = 0.3
+KP = 0.9    
 
 COLOR_RED = 'red'
 COLOR_GREEN = 'blue'
@@ -29,10 +30,9 @@ turn_direction = None
 
 def get_cone_info(image_hsv, hsv_ranges):
     mask = None
-    lower = hsv_ranges[0]
-    upper = hsv_ranges[1]
-    m = cv.inRange(image_hsv, lower, upper)
-    mask = m if mask is None else cv.bitwise_or(mask, m)
+    for lower, upper in hsv_ranges:
+        m = cv.inRange(image_hsv, lower, upper)
+        mask = m if mask is None else cv.bitwise_or(mask, m)
 
     contours, _ = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
@@ -54,8 +54,6 @@ def get_cone_info(image_hsv, hsv_ranges):
     return best_area, center_col, frame_width
 global startTime
 startTime = 0
-global lastError
-lastError = 0
 def start():
     global state, state_timer, target_color, turn_direction, startTime, trials
     state = STATE_ALIGN
@@ -68,14 +66,13 @@ def start():
     rc.drive.stop()
         
 def update():
-    global state, state_timer, target_color, turn_direction, startTime, lastError
+    global state, state_timer, target_color, turn_direction, startTime
     image = rc.camera.get_color_image()
-    rc.display.show_color_image(image)
     image_hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
     delta_time = rc.get_delta_time()
 
     red_area, red_center, frame_width = get_cone_info(image_hsv, CSC.RED)
-    green_area, green_center, _ = get_cone_info(image_hsv, CSC.GREEN)
+    green_area, green_center, _ = get_cone_info(image_hsv, [CSC.GREEN])
 
     state_timer += delta_time
 
@@ -94,9 +91,7 @@ def update():
 
         if area >= CSC.MIN_CONTOUR_AREA and center is not None:
             error = (center - frame_width / 2) / (frame_width / 2)
-            angle = CSC.KP * error + CSC.KD * ((error - lastError) / delta_time)
-            angle = rc_utils.clamp(angle,-1,1)
-            lastError = error
+            angle = max(-1.0, min(1.0, KP * error))
             rc.drive.set_speed_angle(SPED, angle)
 
             if area >= CSC.TRIGGER_AREA:
@@ -107,33 +102,14 @@ def update():
             rc.drive.set_speed_angle(SPED, 0.0)
 
     elif state == STATE_TURN:
-        angle = 1.0 if turn_direction == 'right' else -1.0
-        rc.drive.set_speed_angle(SPED, angle)
-
-        if state_timer >= CSC.TURN_SECONDS:
-            state = STATE_TURN_BACK
-            state_timer = 0.0
+        state = STATE_ALIGN
 
     elif state == STATE_TURN_BACK:
-        angle = -1.0 if turn_direction == 'right' else 1.0
-        rc.drive.set_speed_angle(SPED, angle)
-        next_color = COLOR_GREEN if target_color == COLOR_RED else COLOR_RED
-        next_area = green_area if next_color == COLOR_GREEN else red_area
-
-        next_cone_seen = next_area >= CSC.NEXT_CONE_AREA
-        timed_out = state_timer >= MAX_TURN_BACK_SECONDS
-
-        if next_cone_seen or timed_out:
-            target_color = next_color if next_cone_seen else None
-            state = STATE_ALIGN
-            lastError = 0
-            state_timer = 0.0
-            
+        state = STATE_ALIGN
 
 def update_slow():
-    global state, turn_direction
-    print(f"State: {state}")
-    print(f"Turn Direction {turn_direction}")
+    global contour_area
+    print(f"Target Color {target_color}")
 
 
 if __name__ == "__main__":
