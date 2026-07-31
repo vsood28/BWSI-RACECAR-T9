@@ -1,12 +1,10 @@
 import time
 import math
 
-import rclpy as ros2
 from rclpy.node import Node
 from geometry_msgs.msg import Pose2D
 from nav_msgs.msg import OccupancyGrid
 from ackermann_msgs.msg import AckermannDriveStamped
-from std_msgs.msg import Float32
 
 from astar import AStarPlanner
 
@@ -44,7 +42,6 @@ class PID:  # pid class very simple
 
 
 class SLAMController(Node):
-
     def __init__(self, goal_xy, lookahead_cells=5, pid_gains=(1.0, 0.0, 0.0),
                  obstacle_threshold=60, control_rate=10.0, base_speed=0.5,
                  max_steering_angle=0.4):
