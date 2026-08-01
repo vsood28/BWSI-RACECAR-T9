@@ -46,23 +46,22 @@ def update():
 
 # how to deal with zeroes?    
 
+
 def get_error(scan):
     n = len(scan)
-    scan = scan.copy()
     left = 0
     right = 0
     left_idx = 0
     right_idx = 0
+
     for i in range(-n//4, 0):
         if scan[i] != 0:
-            scan[i] = rc_utils.get_lidar_average_distance(scan, i, 20)
             dist = scan[i]
             if dist > left:
                 left = dist
                 left_idx = i
     for i in range(0, n //4):
         if scan[i] != 0:
-            scan[i] = rc_utils.get_lidar_average_distance(scan, i, 20)
             dist = scan[i]
             if dist > right:
                 right = dist
