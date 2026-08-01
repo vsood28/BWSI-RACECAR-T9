@@ -71,9 +71,9 @@ def weighted_point(pt1, pt2): #get weighted poin tof two points
     d1 = magnitude(pt1)
     d2 = magnitude(pt2)
 
-    d1, d2 = weight_function(d1, d2)
+    d1, d2 = weight_function(d1, d2) #use wiehgt function
 
-    return add_pts(multiply_pt(pt1, d1), multiply_pt(pt2, d2))
+    return add_pts(multiply_pt(pt1, d1), multiply_pt(pt2, d2)) #add scaled 
 
 def tar_ang(smp, n, window, check_window=14, car_size=45):
     pt = weighted_point(window[0], window[1])
@@ -89,7 +89,7 @@ def tar_ang(smp, n, window, check_window=14, car_size=45):
         rng = range(ang - check_window, ang + check_window)
 
     for i in rng:
-        if smp[i] != 0 and smp[i] < smp[min_sample]: #if has a closer sample (i.e. wall nearby)
+        if smp[i] != 0 and smp[i] < smp[min_sample]: #if has a closer sample (i.e. wall close to traget angle)
             min_sample = i
 
     def magnitude(pt):

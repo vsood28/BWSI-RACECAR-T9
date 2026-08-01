@@ -1,7 +1,7 @@
 import numpy as np
 #unitless since this is generic
 class ExtendedKalmanFilter:
-    def __init__(self,
+    def __init__(self, #initalization
                  initial_state_estimate,
                  initial_state_covariance,
                  process_noise_covariance,
@@ -27,14 +27,14 @@ class ExtendedKalmanFilter:
         self.kalman_gain = None
 
     def predict_state(self, control_input, delta_t, **kwargs): #encoder update
-        self.state_estimate = self.state_model(self.state_estimate, control_input, delta_t, **kwargs) #update predicted state
+        self.state_estimate = self.state_model(self.state_estimate, control_input, delta_t, **kwargs) #update predicted state based on state model
 
-        F = self.state_transition_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
+        F = self.state_transition_jacobian(self.state_estimate, control_input, delta_t, **kwargs) #get all jacobians and covariances wiht nice letter names
         P = self.state_estimation_covariance
         Q = self.process_noise_covariance
         G = self.process_noise_jacobian(self.state_estimate, control_input, delta_t, **kwargs)
 
-        self.state_estimation_covariance = F @ P @ F.T + G @ Q @ G.T
+        self.state_estimation_covariance = F @ P @ F.T + G @ Q @ G.T #update state estimation by adding the uncerainty due to state (state trans jacobian) to the current coviarnace, + uncertainty due to processs noise given the current encoder measurement and how that tranlsatates to state noise (given by jacobian)
         
     def update_state(self, true_measurement, delta_t, **kwargs): #measurement step, compares predicted measurement based on state to true measurement, finds difference, applies correction
         predicted_measurement = self.measurement_model(self.state_estimate, delta_t, **kwargs)
@@ -50,6 +50,6 @@ class ExtendedKalmanFilter:
         # equiv to P @ H.T @ np.linalg.inv(S) but faster or smtg idk
         self.state_estimate += self.kalman_gain @ innovation
 
-        L = (I - self.kalman_gain @ H)
+        L = (I - self.kalman_gain @ H) #helper for covariance update, basically "how much of the state is left after the measurement update"
 
         self.state_estimation_covariance = L @ self.state_estimation_covariance @ L.T + self.kalman_gain @ R @ self.kalman_gain.T #joseph form

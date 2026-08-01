@@ -28,68 +28,52 @@ class ICPScanMatcher:
 
     @staticmethod
     def scan_to_points(scan_data, angle_min=-math.pi, angle_increment=None,
-                    range_min=0.05, range_max=12):
-        """
-        Convert scan ranges in meters into Nx2 Cartesian points.
+                    range_min=0.05, range_max=12): #scna to points, self explantory
+        points = [] #out
 
-        Parameters
-        ----------
-        scan_data:
-            Iterable of ranges in meters.
-        angle_min:
-            Angle of the first measurement in radians.
-        angle_increment:
-            Angular separation between measurements in radians.
-        range_min:
-            Minimum valid range.
-        range_max:
-            Maximum valid range.
-        """
-        points = []
-
-        num_samples = len(scan_data)
+        num_samples = len(scan_data) #num sample
 
         if num_samples == 0:
-            return np.empty((0, 2))
+            return np.empty((0, 2)) #empty
 
         if angle_increment is None:
-            angle_increment = (2.0 * math.pi) / num_samples
+            angle_increment = (2.0 * math.pi) / num_samples #calc angle inc if not given
+ 
+        for i, dist in enumerate(scan_data): #for each data
 
-        for i, dist in enumerate(scan_data):
-
-            if not np.isfinite(dist) or dist < range_min or dist > range_max: #inv becomes 0
+            if not np.isfinite(dist) or dist < range_min or dist > range_max: #inf/invalid becomes 0 (consitent wiht racecar lib)
                 dist = 0.0
 
-            angle = angle_min + i * angle_increment
+            angle = angle_min + i * angle_increment #angle
 
-            x = dist * math.cos(angle)
-            y = dist * math.sin(angle)
+            x = dist * math.cos(angle) #vector decomp
+            y = dist * math.sin(angle) #vec decmop
 
-            points.append([x, y])
+            points.append([x, y]) #add
 
-        return np.asarray(points, dtype=float)
+        return np.asarray(points, dtype=float) #return as array
 
     @staticmethod
-    def get_nearest_neighbors(source, target):
-        tree = cKDTree(target)
-        dists, idx = tree.query(source, k=1)
+    def get_nearest_neighbors(source, target): #get neighbor 
+        tree = cKDTree(target) #tree of target
+        dists, idx = tree.query(source, k=1) #query, get 
         return dists, idx
 
     @staticmethod
-    def best_fit_transform(A, B):
-        centroid_A = np.mean(A, axis=0)
-        centroid_B = np.mean(B, axis=0)
+    def best_fit_transform(A, B): # ls trans, bf
+        centroid_A = np.mean(A, axis=0) #centeroid of smpa
+        centroid_B = np.mean(B, axis=0) #cent of smp b
 
-        AA = A - centroid_A
+        AA = A - centroid_A #delta_positoon for each in A
         BB = B - centroid_B
 
-        H = AA.T @ BB
+        H = AA.T @ BB 
 
-        U, S, Vt = np.linalg.svd(H)
+        U, S, Vt = np.linalg.svd(H) 
 
         R = Vt.T @ U.T
 
-        if np.linalg.det(R) < 0:
+        if np.linalg.det(R) < 0: #if 
             Vt[-1] *= -1
             R = Vt.T @ U.T
 
@@ -98,13 +82,10 @@ class ICPScanMatcher:
         return R, t
 
     @staticmethod
-    def _normalize_angle(angle):
-        """Wrap an angle (radians) into (-pi, pi]."""
+    def _normalize_angle(angle): #wrap angle
         return (angle + math.pi) % (2 * math.pi) - math.pi
 
-    # ---------- ICP core ----------
-
-    def icp(self, source, target, init_R=None, init_t=None):
+    def icp(self, source, target, init_R=None, init_t=None): #one iter, read viir's comments, i just refomrateed the code, but logic is still the same
         R_total = np.eye(2) if init_R is None else init_R.copy()
         t_total = np.zeros(2) if init_t is None else init_t.copy()
 
@@ -141,8 +122,6 @@ class ICPScanMatcher:
 
         return R_total, t_total, mean_error, iters + 1
 
-    # ---------- public API ----------
-
     def update(self, cur_points):
         if (
             self.last_points is None
@@ -151,7 +130,7 @@ class ICPScanMatcher:
         ):
             self.last_points = cur_points
             self.last_transform = None
-            return self.state
+            return self.state #invalid, just return early
 
         init_R = self.last_transform[0] if self.last_transform is not None else None
         init_t = self.last_transform[1] if self.last_transform is not None else None
@@ -161,31 +140,30 @@ class ICPScanMatcher:
             self.last_points,
             init_R,
             init_t,
-        )
+        ) #get rot and transpose from icp
 
-        self.last_points = cur_points
+        self.last_points = cur_points #update
 
-        if mean_error is None:
+        if mean_error is None: #not enough
             self.last_transform = None
             print("ICP match failed (insufficient inliers); pose not updated.")
             return self.state
 
-        self.last_transform = (R, t)
+        self.last_transform = (R, t) #update
 
-        dtheta = math.atan2(R[1, 0], R[0, 0])
+        dtheta = math.atan2(R[1, 0], R[0, 0]) #convert from translation in points to translation in bot pose to absolute pose ()
         dx, dy = t[0], t[1]
 
-        theta = self.state.theta
+        theta = self.state.theta 
         cos_t, sin_t = math.cos(theta), math.sin(theta)
 
         new_x = self.state.x + dx * cos_t - dy * sin_t
         new_y = self.state.y + dx * sin_t + dy * cos_t
         new_theta = self._normalize_angle(theta - dtheta)
 
-        self.state = Pose(new_x, new_y, new_theta)
+        self.state = Pose(new_x, new_y, new_theta) #abs pose based on accumulated xy
 
-        return self.state
+        return self.state #return
 
-
-    def get_pose(self):
+    def get_pose(self): #getter
         return self.state

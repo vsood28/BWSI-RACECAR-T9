@@ -10,7 +10,7 @@ from controller_node import SLAMController
 from ekf_models import state_transistion_jacobian, process_noise_jacobian, measurement_jacobian, state_model, measurement_model
 
 # --- goal for the controller, set this to whatever target (x, y) you want ---
-GOAL_XY = (2.0, 1.0)  # meters, in map frame
+GOAL_XY = (2.0, 1.0)  # meters, in map frame. should be ros node (reference block), but variable for known for times sake
 
 
 def main(args=None):
@@ -33,17 +33,17 @@ def main(args=None):
         ]),
     }
 
-    jacobians = {"st": state_transistion_jacobian, "me": measurement_jacobian, "pr": process_noise_jacobian}
+    jacobians = {"st": state_transistion_jacobian, "me": measurement_jacobian, "pr": process_noise_jacobian} #use ekf models
 
-    models = {"st": state_model, "me": measurement_model}
+    models = {"st": state_model, "me": measurement_model} #ekfmdodels
 
     grid_params = {"w": 200, "h": 360, "res": 0.05}  # 10m by 18 m
 
-    grid_odds = {"po": 0.5, "poh": 0.8, "pom": 0.2}
+    grid_odds = {"po": 0.5, "poh": 0.8, "pom": 0.2} #prior is .5, 0.8 if hit, 0.2 if miss
 
-    sys_params = {"wheelbase": 20}
+    sys_params = {"wheelbase": 20} #syspramas
 
-    se_node = StateEstimationNode(
+    se_node = StateEstimationNode( #create se block
         np.array([0.0, 0.0, 0.0]),
         covariance,
         models,
@@ -53,7 +53,7 @@ def main(args=None):
         sys_params
         )
 
-    controller_node = SLAMController(
+    controller_node = SLAMController( #create controller block
         goal_xy=GOAL_XY,
         lookahead_cells=5,
         pid_gains=(1.0, 0.0, 0.0),
@@ -63,16 +63,16 @@ def main(args=None):
         max_steering_angle=0.4,
     )
 
-    executor = MultiThreadedExecutor()
+    executor = MultiThreadedExecutor() #tohandle mutliple
     executor.add_node(se_node)
     executor.add_node(controller_node)
 
     try:
-        executor.spin()
+        executor.spin() #spin me right round baby right round
     except KeyboardInterrupt:
-        pass
+        pass #if killed
     finally:
-        executor.shutdown()
+        executor.shutdown() #close everything
         se_node.destroy_node()
         controller_node.destroy_node()
         ros2.shutdown()

@@ -163,70 +163,48 @@ class AStarPlanner:
 
             yield (nx, ny), step_cost
 
-    def plan(self, start_world, goal_world):
-        """
-        Find a path from start_world to goal_world.
-
-        Args:
-            start_world:
-                Tuple containing (x, y) in the map frame.
-
-            goal_world:
-                Tuple containing (x, y) in the map frame.
-
-        Returns:
-            A list of world-coordinate tuples:
-
-                [
-                    (x0, y0),
-                    (x1, y1),
-                    ...
-                ]
-
-            Returns None if no path exists.
-        """
-        start = self.world_to_grid(
+    def plan(self, start_world, goal_world): #gives path from start to goal in world coords
+        start = self.world_to_grid( #get in grid
             start_world[0],
             start_world[1],
         )
 
-        goal = self.world_to_grid(
+        goal = self.world_to_grid( #get in grid
             goal_world[0],
             goal_world[1],
         )
 
-        if not self.is_in_bounds(*start):
+        if not self.is_in_bounds(*start): #bounds check
             raise ValueError(
                 f"Start position {start_world} is outside the map."
             )
 
-        if not self.is_in_bounds(*goal):
+        if not self.is_in_bounds(*goal): #bounds check
             raise ValueError(
                 f"Goal position {goal_world} is outside the map."
             )
 
-        if not self.is_traversable(*start):
+        if not self.is_traversable(*start): #possible check
             raise ValueError(
                 f"Start cell {start} is occupied or unknown."
             )
 
-        if not self.is_traversable(*goal):
+        if not self.is_traversable(*goal): #possible check
             raise ValueError(
                 f"Goal cell {goal} is occupied or unknown."
             )
 
         open_set = []
 
-        # A counter avoids comparing grid-coordinate tuples when
-        # two heap entries have the same priority.
+        # counter avoids comparing grid-coordinate tuples when two heap entries have the same priority.
         counter = 0
 
-        start_f = self.heuristic(
+        start_f = self.heuristic( # initial fscore given by heuristic
             start,
             goal,
         )
 
-        heapq.heappush(
+        heapq.heappush( #first point push
             open_set,
             (
                 start_f,
@@ -235,54 +213,54 @@ class AStarPlanner:
             ),
         )
 
-        came_from = {}
+        came_from = {} #path reconstruction dict (traceback)
 
-        g_score = {
+        g_score = { #cost from start to current, start->self is obviously 0
             start: 0.0
         }
 
-        closed = set()
+        closed = set() #visited
 
-        while open_set:
+        while open_set: #nodes to explore
 
-            _, _, current = heapq.heappop(
+            _, _, current = heapq.heappop( #get node with lowest fscore (cost to neighbors + heuristic)
                 open_set
             )
 
-            if current in closed:
+            if current in closed: #if visited, skip
                 continue
 
-            if current == goal:
-                return self._reconstruct_path(
+            if current == goal: #end
+                return self._reconstruct_path( #reconstruct, then return list
                     came_from,
                     current,
                 )
 
-            closed.add(current)
+            closed.add(current) #visited update
 
-            for neighbor, step_cost in self.get_neighbors(
+            for neighbor, step_cost in self.get_neighbors( #check neighbors and their costs
                 current
             ):
 
-                if neighbor in closed:
+                if neighbor in closed: #visited, skip
                     continue
 
                 tentative_g = (
-                    g_score[current]
+                    g_score[current] #cost start->current + current->neighbor (step cost)
                     + step_cost
                 )
 
-                if tentative_g >= g_score.get(
+                if tentative_g >= g_score.get( #if neighbor visited and cost is higher than previosu given, skip since we already ahve better ptah to 
                     neighbor,
                     float("inf"),
                 ):
                     continue
 
-                came_from[neighbor] = current
+                came_from[neighbor] = current # add to dict
 
-                g_score[neighbor] = tentative_g
+                g_score[neighbor] = tentative_g #update g_score
 
-                f_score = (
+                f_score = ( #fscore, cost + heuristic to goal
                     tentative_g
                     + self.heuristic(
                         neighbor,
@@ -290,9 +268,9 @@ class AStarPlanner:
                     )
                 )
 
-                counter += 1
+                counter += 1 #inc, to avoid comparing same pirority nodes
 
-                heapq.heappush(
+                heapq.heappush( #add neighbor to points to consider with its priority, counter, and data
                     open_set,
                     (
                         f_score,
@@ -303,23 +281,20 @@ class AStarPlanner:
 
         return None
 
-    def _reconstruct_path(
+    def _reconstruct_path( #just traverse backwards from goal to start
         self,
         came_from,
         current,
     ):
-        """
-        Reconstruct the grid path and convert it to world coordinates.
-        """
         grid_path = [current]
 
-        while current in came_from:
-            current = came_from[current]
-            grid_path.append(current)
+        while current in came_from: #while can go back
+            current = came_from[current] #which did i come from?
+            grid_path.append(current) #we add that to the path
 
-        grid_path.reverse()
+        grid_path.reverse() #reverse so start->goal instead of goal->start
 
         return [
-            self.grid_to_world(x, y)
+            self.grid_to_world(x, y) #world coords
             for x, y in grid_path
         ]

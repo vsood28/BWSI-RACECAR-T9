@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-def lidar_to_positions(lidar):
+def lidar_to_positions(lidar): #lidar to cartesian
     smp = lidar.get_samples()
     n = lidar.get_num_samples()
     
@@ -71,7 +71,7 @@ def lidar_ray_within_range(lidar, i, left, right):
         return cart_angle >= right or cart_angle <= left
 
 
-class Position:
+class Position: #position class 
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
@@ -136,14 +136,14 @@ class Position:
     def __repr__(self):
         return f"Position(x={self.x}, y={self.y})"
 
-def point_avg(pts):
+def point_avg(pts): #avg of points
     out = Position(0, 0)
     for pt in pts:
         out += pt
     return out / len(pts)
 
 def find_cones(lidar, cone_max_size=12, min_gap=50):
-    pts = lidar_to_positions(lidar)
+    pts = lidar_to_positions(lidar) #carts
 
     cone_pts = []
 
@@ -152,48 +152,45 @@ def find_cones(lidar, cone_max_size=12, min_gap=50):
     for pt in pts:
         if len(current) == 0 or pt.distance(current[-1]) < min_gap: #not a gap
             current.append(pt)
-        else:
-            if len(current) <= cone_max_size:
-                cone_pts.append(current)
+        else: #gap, looking at new cluster now
+            if len(current) <= cone_max_size: #if cluster small enogu
+                cone_pts.append(current) #yay cone
 
-            current = [pt]
+            current = [pt] #create new cluster
 
-    out = [point_avg(c_gp) for c_gp in cone_pts]
+    out = [point_avg(c_gp) for c_gp in cone_pts] #create single point to reperesnt each point
 
     return out
 
 def closest_cone(cones, ignore_behind=True):
-    if len(cones) == 0:
+    if len(cones) == 0: #null case
         return None
     
-    closest = cones[0]
+    closest = cones[0] #default
 
     for pt in cones:
-        if (not ignore_behind or pt.y > 0) and pt.magnitude() < closest.magnitude():
+        if (not ignore_behind or pt.y > 0) and pt.magnitude() < closest.magnitude(): #get closest (i mean what did you expect)
             closest = pt
 
-    return closest
+    return closest 
 
-def target_point(cone, side, target_offset=30):
+def target_point(cone, side, target_offset=30): #get target given cone pose and target side
     if cone is None:
-        return Position(0, 1)
+        return Position(0, 1) #forwards
 
-    n = cone.normal()
+    n = cone.normal() #normal
 
     if (n.x > 0 and side) or (n.x < 0 and not side): #correct side, side=true means right
-        n *= target_offset
-    else: 
-        n *= -target_offset
+        n *= target_offset #scale to target offset
+    else:  
+        n *= -target_offset #flip so normal faces the right side
 
-    return cone + n
+    return cone + n #add the offset from cone to cone pose
 
-def is_past_cone(cone, side, threshold=10):
-    return ((not side and cone.x < threshold) or (side and cone.x > 0)) and cone.y < threshold
-
-def angle_to_target(pt):
+def angle_to_target(pt): #pt toangle for error
     return math.atan2(pt.x, pt.y)
 
-def min_scan(scan, ind, wind):
+def min_scan(scan, ind, wind): #min of scan
     m = float('inf')
     n = len(scan)
 
@@ -201,6 +198,6 @@ def min_scan(scan, ind, wind):
         value = scan[(ind + offset) % n]  # circular indexing
 
         if value != 0 and value < m:
-            m = value
+            m = value #if val lower, update
 
     return m
