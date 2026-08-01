@@ -10,36 +10,6 @@ import time
 start_time = None
 
 rc = racecar_core.create_racecar()
-    
-class PID:
-    def __init__(self, kP=0,kI=0,kD=0):
-        self.kP = kP
-        self.kI = kI
-        self.kD = kD
-        self.prev_error = 0
-        self.cum_i_val = 0
-        self.prev_tick_called = 0
-
-    def reset(self):
-        self.prev_error = 0
-        self.cum_i_val = 0
-        self.prev_tick_called = 0
-
-    def tick(self, setpoint, val, reset=False):
-        if reset:
-            self.reset()
-
-        error = val - setpoint
-        dt = time.perf_counter() - self.prev_tick_called
-
-        p = self.kP * error
-        self.cum_i_val += self.kI * error * dt
-        d = self.kD * (error - self.prev_error) / dt
-
-        self.prev_error = error
-        self.prev_tick_called = time.perf_counter()
-
-        return p + self.cum_i_val + d
 
 global angle
 angle = 0.0
@@ -53,22 +23,13 @@ KD = 0.0
 KPS = 0.002
 KDS = 0
 
-SPEED_BASELINE = 300
-
 ZERO_THRESHOLD = 5
-
-steering_pid = PID(kP=KP, kD=KD)
-speed_pid = PID(kP=KPS, kD=KDS)
 
 def start():
     global start_time
 
-    steering_pid.reset()
-
     rc.drive.set_speed_angle(0, 0)
     rc.drive.set_max_speed(1)
-
-    start_time = time.time()
 
     rc.set_update_slow_time(0.5)
 
@@ -77,15 +38,11 @@ def update():
     global angle, error, speed
     error = follow_gap(rc.lidar)
     #check angle sign
-    angle = steering_pid.tick(0, error)
+    angle = 0
 
     angle = rc_utils.clamp(angle, -1, 1)
 
-    l = rc.lidar.get_samples()[0]
-
-    speed = speed_pid.tick(SPEED_BASELINE, l)
-    speed = rc_utils.clamp(speed, 0.1, 1) #dont stop (believin')
-    rc.drive.set_max_speed(1)
+    speed = rc_utils.clamp(speed, 0.1, 1)
     rc.drive.set_speed_angle(speed, angle)
     
 def follow_gap(lidar):
