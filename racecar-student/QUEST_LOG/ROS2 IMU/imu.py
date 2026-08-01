@@ -1,3 +1,6 @@
+# imu node to publish /attitude, /velocity, /pose_estimate
+# had help from sixian with math
+
 ### Imports ###
 
 import rclpy

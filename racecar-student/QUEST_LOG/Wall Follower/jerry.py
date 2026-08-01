@@ -1,3 +1,5 @@
+# traded for code from team 1. essentially a furthest point follower
+
 MAX_SPEED = 1.0
 
 angle = 0.0

@@ -2,6 +2,9 @@
 ################################ NOT USING ######################################
 #################################################################################
 
+# wall follower node but did not get to figuring out sending commands to wall follow
+# or how to usefully integrate velocity/attitude/2d pose
+
 ### Imports ###
 import rclpy 
 from rclpy.node import Node  

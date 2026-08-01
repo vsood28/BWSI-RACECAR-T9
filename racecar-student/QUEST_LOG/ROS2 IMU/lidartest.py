@@ -1,3 +1,6 @@
+# trying to get the /scan publish into usable values 
+# stopped using after realizing that we dont need a wall follower node
+
 ### Imports ###
 import rclpy 
 from rclpy.node import Node  
@@ -21,7 +24,7 @@ class WallFollower(Node):
         # remove warning flag
         self.__lidar_sub
 
-    def __scan_callback(self, data):
+    def __scan_callback(self, data): # copied from lidar_real from the 2025 library
         scan_data = np.flip(np.multiply(np.array(data.ranges), 100))
         self.__samples = np.array([0 if str(x) == "inf" else x for x in scan_data])
 
