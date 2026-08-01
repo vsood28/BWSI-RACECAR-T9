@@ -14,12 +14,16 @@ import time
 
 import numpy as np
 
+#TODO: add the method for zereos and just use static rays
+
 sys.path.insert(0, "../../library")
 import racecar_core
 import racecar_utils as rc_utils
 
 rc = racecar_core.create_racecar(isSimulation=False)
 time.sleep(2)
+
+MIN_ZEROES = 5
 
 def findMaxW(scan, minA, maxA, window):
     length = scan.shape[0]
@@ -47,11 +51,20 @@ def start():
     rc.set_update_slow_time(0.1)
     rc.drive.set_max_speed(MAX_SPEED)
 
+def get_zeroes(scan):
+    num = 0
+    for i in range(len(scan)):
+        if scan[i] == 0:
+            num += 1
+    return num        
 
 def update():
     global speed, angle, last_error
 
     scan = rc.lidar.get_samples()
+
+    #if get_zeroes(scan) >= MIN_ZEROES:
+        #reg_follow()
 
     raw_gap = findMaxW(scan, -90, 90, 30)
 
@@ -60,10 +73,14 @@ def update():
     d_error = (error - last_error) / dt if dt > 0 else 0.0
     last_error = error
     angle = float(np.clip(error * kP + d_error * kD, -1.0, 1.0))
-    speed = MAX_SPEED
+    speed = 1
 
     rc.drive.set_speed_angle(speed, rc_utils.clamp(angle, -1.0, 1.0))
     print(f"raw raw_gap: {raw_gap}, angle: {angle},  speed: {speed}")
+
+def reg_follow():
+    pass
+
 
 rc.set_start_update(start, update)
 rc.go()
