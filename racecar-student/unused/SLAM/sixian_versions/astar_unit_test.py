@@ -1,0 +1,348 @@
+import pytest
+
+from astar import AStarPlanner
+
+#when running unit test
+
+
+class FakePosition:
+    def __init__(self, x=0.0, y=0.0):
+        self.x = x
+        self.y = y
+
+
+class FakeOrigin:
+    def __init__(self, x=0.0, y=0.0):
+        self.position = FakePosition(x, y)
+
+
+class FakeInfo:
+    def __init__(
+        self,
+        width,
+        height,
+        resolution,
+        origin_x=0.0,
+        origin_y=0.0,
+    ):
+        self.width = width
+        self.height = height
+        self.resolution = resolution
+        self.origin = FakeOrigin(
+            origin_x,
+            origin_y,
+        )
+
+
+class FakeOccupancyGrid:
+    """
+    Minimal replacement for nav_msgs/msg/OccupancyGrid.
+    """
+
+    def __init__(
+        self,
+        width,
+        height,
+        data,
+        resolution=1.0,
+        origin_x=0.0,
+        origin_y=0.0,
+    ):
+        self.info = FakeInfo(
+            width,
+            height,
+            resolution,
+            origin_x,
+            origin_y,
+        )
+
+        self.data = data
+
+
+def make_map(width, height, obstacles=None):
+    """
+    Create a simple empty occupancy grid.
+
+    obstacles:
+        list of (x, y) cells to mark occupied.
+    """
+
+    data = [
+        0
+        for _ in range(width * height)
+    ]
+
+    if obstacles:
+        for x, y in obstacles:
+            data[y * width + x] = 100
+
+    return FakeOccupancyGrid(
+        width,
+        height,
+        data,
+    )
+
+
+def test_world_grid_conversion():
+    grid = make_map(10, 10)
+
+    planner = AStarPlanner(grid)
+
+    assert planner.world_to_grid(
+        2.5,
+        3.5,
+    ) == (
+        2,
+        3,
+    )
+
+    assert planner.grid_to_world(
+        2,
+        3,
+    ) == (
+        2.5,
+        3.5,
+    )
+
+
+def test_simple_straight_path():
+    """
+    Open map, start and goal have direct diagonal path.
+    """
+
+    grid = make_map(
+        10,
+        10,
+    )
+
+    planner = AStarPlanner(grid)
+
+    path = planner.plan(
+        (1.5, 1.5),
+        (5.5, 5.5),
+    )
+
+    assert path is not None
+
+    assert path[0] == (
+        1.5,
+        1.5,
+    )
+
+    assert path[-1] == (
+        5.5,
+        5.5,
+    )
+
+    # Diagonal movement should produce
+    # fewer than Manhattan distance steps.
+    assert len(path) <= 6
+
+
+def test_path_around_obstacle_wall():
+    """
+    Create a wall with a gap and verify A* routes around it.
+
+    Map:
+
+    S . . X G
+    . . . X .
+    . . . X .
+    . . . . .
+    . . . . .
+
+    """
+
+    obstacles = [
+        (3, 0),
+        (3, 1),
+        (3, 2),
+    ]
+
+    grid = make_map(
+        5,
+        5,
+        obstacles,
+    )
+
+    planner = AStarPlanner(grid)
+
+    path = planner.plan(
+        (0.5, 0.5),
+        (4.5, 0.5),
+    )
+
+    assert path is not None
+
+    assert path[0] == (
+        0.5,
+        0.5,
+    )
+
+    assert path[-1] == (
+        4.5,
+        0.5,
+    )
+
+    # Verify no obstacle cells appear in path
+    for x, y in path:
+        gx, gy = planner.world_to_grid(
+            x,
+            y,
+        )
+
+        print(gx, gy)
+
+        assert (
+            gx,
+            gy,
+        ) not in obstacles
+
+def test_no_path_when_blocked():
+    """
+    Completely surround goal with obstacles.
+    . x .
+    x x .
+    . . .
+    """
+
+    obstacles = [
+        (1, 0),
+        (0, 1),
+        (1, 1),
+    ]
+
+    grid = make_map(
+        3,
+        3,
+        obstacles,
+    )
+
+    planner = AStarPlanner(grid)
+
+    path = planner.plan(
+        (2.5, 2.5),
+        (0.5, 0.5),
+    )
+
+    assert path is None
+
+
+def test_unknown_cells_blocked_by_default():
+    """
+    -1 cells should be treated as obstacles unless
+    allow_unknown=True.
+    """
+
+    grid = FakeOccupancyGrid(
+        3,
+        1,
+        [
+            0,
+            -1,
+            0,
+        ],
+    )
+
+    planner = AStarPlanner(
+        grid,
+        allow_unknown=False,
+    )
+
+    path = planner.plan(
+        (0.5, 0.5),
+        (2.5, 0.5),
+    )
+
+    assert path is None
+
+
+def test_unknown_cells_allowed():
+    grid = FakeOccupancyGrid(
+        3,
+        1,
+        [
+            0,
+            -1,
+            0,
+        ],
+    )
+
+    planner = AStarPlanner(
+        grid,
+        allow_unknown=True,
+    )
+
+    path = planner.plan(
+        (0.5, 0.5),
+        (2.5, 0.5),
+    )
+
+    assert path is not None
+
+
+def test_diagonal_corner_cutting_is_prevented():
+    """
+    Two obstacles form a corner:
+
+    S X
+    X G
+
+    The diagonal move should be rejected.
+    """
+
+    obstacles = [
+        (1, 0),
+        (0, 1),
+    ]
+
+    grid = make_map(
+        2,
+        2,
+        obstacles,
+    )
+
+    planner = AStarPlanner(grid)
+
+    path = planner.plan(
+        (0.5, 0.5),
+        (1.5, 1.5),
+    )
+
+    assert path is None
+
+
+def test_start_on_obstacle_raises():
+    grid = make_map(
+        3,
+        3,
+        obstacles=[
+            (0, 0),
+        ],
+    )
+
+    planner = AStarPlanner(grid)
+
+    with pytest.raises(ValueError):
+        planner.plan(
+            (0.5, 0.5),
+            (2.5, 2.5),
+        )
+
+
+def test_goal_on_obstacle_raises():
+    grid = make_map(
+        3,
+        3,
+        obstacles=[
+            (2, 2),
+        ],
+    )
+
+    planner = AStarPlanner(grid)
+
+    with pytest.raises(ValueError):
+        planner.plan(
+            (0.5, 0.5),
+            (2.5, 2.5),
+        )

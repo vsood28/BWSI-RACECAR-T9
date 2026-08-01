@@ -11,21 +11,20 @@ import numpy as np # maybe unnecessary?
 
 rc = racecar_core.create_racecar()
 
-BIG = 99999
-WINDOW_LEN = 16 # 8 degrees in each direction
+# BIG = 99999
+WINDOW_LEN = 10 # 5 degrees in each direction
 
-speed = 1
+speed = 0
 angle = 0
 
 largest_l = 0
-index_l = 270
-scan_l = []
-# window_l = []
+index_l = 360
 
 largest_r = 0
 index_r = 0
-scan_r = []
-# window_r = []
+
+weight = 200
+kP = 0.05
 
 # Functions
 def start():    
@@ -36,62 +35,73 @@ def start():
 def update():
     updateLargest()
 
-    angle = rc_utils.clamp(angle, -1, 1)
     rc.drive.set_speed_angle(speed, angle)
-    print("center: ", center, "angle: ", angle)
+    print("==========================================================================")
+    print("left_angle: ", left_angle, "left_angle_weight: ", left_angle_weight)
+    print("right_angle: ", right_angle, "right_angle_weight: ", right_angle_weight)
+    print("speed: ", speed, "angle: ", angle)
 
 def updateLargest():
+    global left_angle, right_angle
+    global left_angle_weight, right_angle_weight
     global largest_l, largest_r
     global index_l, index_r
-    global scan_l, scan_r
-    # global window_l, window_r
+    global speed, angle
 
     scan = rc.lidar.get_samples() # 1080 points
     num = rc.lidar.get_num_samples() # 1080
 
-    temp = []
-    for i in range (-num//4, -num//4 + WINDOW_LEN): # add 270 - 273 degrees to the window (12 values)
-        if scan[i] == 0:
-            scan_l[i] = BIG
+    largest_l = 0
+    index_l = 360
 
-        temp.append(scan[i])
-    window_l.extend(temp) 
+    largest_r = 0
+    index_r = 0
 
-    temp.clear()
-    for i in range (0, WINDOW_LEN): # add 0 - 3 degrees to the window (12 values)
-        if scan[i] == 0:
-            scan_r[i] = BIG
+    scan_l = scan[270*3:360*3]
+    scan_r = scan[0:90*3]
 
-        temp.append(scan[i])
-    window_r.extend(temp)
-    # temp should get garbage collected
-
-    for i in range (-num//4 + WINDOW_LEN + 1, 0): # 270 to 360 degrees of the lidar scan
-            scan_l = scan # this is probably inefficient
-            if scan_l[i] == 0:
-                scan_l[i] = BIG
-
-            val = rc_utils.get_lidar_average_distance(scan_l, i, WINDOW_LEN)
+    for i in range (270, 360): # 270 to 360 degrees of the lidar scan
+        l_val = rc_utils.get_lidar_average_distance(scan_l, i, WINDOW_LEN)
             
-            if val > largest_l:
-                
+        if l_val > largest_l:
+            largest_l = l_val   
+            index_l = i # e.g. 280
     
-            center = (startpos + (startpos + largest_len)) / 2
-    
-    for i in range (WINDOW_LEN + 1, num//4 - WINDOW_LEN): # 0 to 90 degrees of the lidar scan
-        pass
+    for i in range (0, 90): # 0 to 90 degrees of the lidar scan
+        r_val = rc_utils.get_lidar_average_distance(scan_r, i, WINDOW_LEN) 
+                    
+        if r_val > largest_r:
+            largest_r = r_val
+            index_r = i # e.g. 45
 
+    left_angle = (360 - index_l) * -1 # - from 0
+    right_angle = index_r
 
-def setAngle(distance):
-    global angle
+    # add weights together: minimum 0.5 and max 1.0 for an individual weight
+    if largest_r > largest_l:
+        right_angle_weight = (largest_r - largest_l) / weight
+        if right_angle_weight > 0.5:
+            right_angle_weight = 0.5
+        left_angle_weight = right_angle_weight * -1
+    else:
+        left_angle_weight = (largest_l - largest_r) / weight
+        if left_angle_weight > 0.5:
+            left_angle_weight = 0.5
+        right_angle_weight = left_angle_weight * -1
 
-    if distance is not None:
-        setpoint = 0
-        kp = -5
-        error = setpoint - distance
-        angle = kp * error
+    left_angle_weight += 0.5
+    right_angle_weight += 0.5
 
-        angle = rc_utils.clamp(angle, -1, 1)
+    error = ((left_angle * left_angle_weight) + (right_angle * right_angle_weight)) / 2
+    angle = error * kP
+
+    if abs(angle) > 0.15:
+        speed = -0.4 * abs(angle) + 1
+    else:
+        speed = 1
+
+    speed = rc_utils.clamp(speed, -1, 1)
+    angle = rc_utils.clamp(angle, -1, 1)
 
 def update_slow():
     pass

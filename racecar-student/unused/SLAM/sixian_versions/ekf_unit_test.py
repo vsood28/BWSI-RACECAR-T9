@@ -1,0 +1,239 @@
+import numpy as np
+import pytest
+
+from ekf import ExtendedKalmanFilter
+
+
+# ============================================================
+# Test system
+#
+# State:
+#   x = position
+#
+# Dynamics:ekf
+#   x(k+1) = x(k) + u*dt
+#
+# Measurement:
+#   z = x
+#
+# ============================================================
+
+
+def state_model(x, u, dt, **kwargs):
+    """Full state prediction"""
+    return np.array([
+        x[0] + u * dt
+    ])
+
+
+def state_transition_jacobian(x, u, dt, **kwargs):
+    return np.array([
+        [1.0]
+    ])
+
+
+def measurement_model(x, dt, **kwargs):
+    return np.array([
+        x[0]
+    ])
+
+
+def measurement_jacobian(x, dt, **kwargs):
+    return np.array([
+        [1.0]
+    ])
+
+
+def process_noise_jacobian(x, u, dt, **kwargs):
+    return np.array([
+        [1.0]
+    ])
+
+
+@pytest.fixture
+def ekf():
+    return ExtendedKalmanFilter(
+        initial_state_estimate=np.array([0.0]),
+        initial_state_covariance=np.array([[1.0]]),
+        process_noise_covariance=np.array([[0.1]]),
+        measurement_noise_covariance=np.array([[0.5]]),
+        state_transition_jacobian=state_transition_jacobian,
+        measurement_jacobian=measurement_jacobian,
+        process_noise_jacobian=process_noise_jacobian,
+        state_model=state_model,
+        measurement_model=measurement_model,
+    )
+
+
+# ============================================================
+# Initialization
+# ============================================================
+
+def test_initialization(ekf):
+    np.testing.assert_array_equal(
+        ekf.state_estimate,
+        np.array([0.0])
+    )
+
+    np.testing.assert_array_equal(
+        ekf.state_estimation_covariance,
+        np.array([[1.0]])
+    )
+
+    assert ekf.kalman_gain is None
+
+
+# ============================================================
+# Prediction step
+# ============================================================
+
+def test_predict_state_updates_state(ekf):
+    ekf.predict_state(
+        control_input=2.0,
+        delta_t=0.5
+    )
+
+    # x = 0 + 2*0.5
+    np.testing.assert_allclose(
+        ekf.state_estimate,
+        np.array([1.0])
+    )
+
+
+def test_predict_state_updates_covariance(ekf):
+    ekf.predict_state(
+        control_input=0.0,
+        delta_t=1.0
+    )
+
+    # P = FPF^T + GQG^T
+    #
+    # = 1*1*1 + 1*0.1*1
+    # = 1.1
+    np.testing.assert_allclose(
+        ekf.state_estimation_covariance,
+        np.array([[1.1]])
+    )
+
+
+# ============================================================
+# Measurement update
+# ============================================================
+
+def test_update_moves_state_towards_measurement(ekf):
+    ekf.update_state(
+        true_measurement=np.array([10.0]),
+        delta_t=1.0
+    )
+
+    # Kalman gain = 1/(1+0.5)
+    # New state = 0 + gain*10
+    expected = 10.0 / 1.5
+
+    np.testing.assert_allclose(
+        ekf.state_estimate,
+        np.array([expected])
+    )
+
+
+def test_update_calculates_correct_kalman_gain(ekf):
+    ekf.update_state(
+        true_measurement=np.array([5.0]),
+        delta_t=1.0
+    )
+
+    expected_gain = 1.0 / (1.0 + 0.5)
+
+    np.testing.assert_allclose(
+        ekf.kalman_gain,
+        np.array([[expected_gain]])
+    )
+
+
+def test_update_reduces_uncertainty(ekf):
+    initial_covariance = (
+        ekf.state_estimation_covariance.copy()
+    )
+
+    ekf.update_state(
+        true_measurement=np.array([5.0]),
+        delta_t=1.0
+    )
+
+    assert (
+        ekf.state_estimation_covariance[0, 0]
+        <
+        initial_covariance[0, 0]
+    )
+
+
+# ============================================================
+# Joseph covariance update
+# ============================================================
+
+def test_covariance_is_symmetric_after_update(ekf):
+    ekf.update_state(
+        true_measurement=np.array([3.0]),
+        delta_t=1.0
+    )
+
+    P = ekf.state_estimation_covariance
+
+    np.testing.assert_allclose(
+        P,
+        P.T
+    )
+
+
+def test_covariance_is_positive(ekf):
+    ekf.update_state(
+        true_measurement=np.array([3.0]),
+        delta_t=1.0
+    )
+
+    eigenvalues = np.linalg.eigvals(
+        ekf.state_estimation_covariance
+    )
+
+    assert np.all(eigenvalues >= 0)
+
+
+# ============================================================
+# Filter behavior
+# ============================================================
+
+def test_zero_innovation_does_not_change_state(ekf):
+    before = ekf.state_estimate.copy()
+
+    ekf.update_state(
+        true_measurement=np.array([0.0]),
+        delta_t=1.0
+    )
+
+    np.testing.assert_allclose(
+        ekf.state_estimate,
+        before
+    )
+
+
+def test_filter_converges_with_repeated_measurements(ekf):
+    measurements = [
+        np.array([5.0]),
+        np.array([5.0]),
+        np.array([5.0]),
+        np.array([5.0]),
+        np.array([5.0]),
+    ]
+
+    for z in measurements:
+        ekf.predict_state(
+            control_input=0.0,
+            delta_t=1.0
+        )
+
+        ekf.update_state(
+            true_measurement=z,
+            delta_t=1.0
+        )
+
+    assert abs(ekf.state_estimate[0] - 5.0) < 0.2
