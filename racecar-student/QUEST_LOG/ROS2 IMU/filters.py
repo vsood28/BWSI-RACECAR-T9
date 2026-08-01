@@ -1,3 +1,7 @@
+# ros implementation of complementary and kalman filters
+# kalman is a 1dkf, certain values were removed from complementary update after realizing that i 
+# needed to implement ekfs and rotating acceleration into the world frame
+
 import math
 import time
 

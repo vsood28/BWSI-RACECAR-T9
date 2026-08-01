@@ -1,3 +1,7 @@
+# luke pure pursuit attempt - realized that this solution was too convoluted because if i go through all the effort
+# to do pure pursuit, i might as well do eats, because the two systems do not have too too much difference in 
+# implementation.
+
 # Imports
 
 import sys
@@ -11,7 +15,7 @@ import racecar_utils as rc_utils
 
 rc = racecar_core.create_racecar()
 
-LOOKAHEAD_DIST = 500
+LOOKAHEAD_DIST = 500 # capping lidar
 speed = 1
 
 # Functions
@@ -33,6 +37,7 @@ def update():
         if scan[i] == 0:
             scan[i] = LOOKAHEAD_DIST
 
+        # if the scan is under a certain range but above or equal to the largest value, start making a dynamic sized array
         if scan[i] <= LOOKAHEAD_DIST and scan[i] >= largest: # average distance of every x points into _ and then nyoom
             startpos = i - len
             len = len + 1
@@ -41,12 +46,12 @@ def update():
 
         center = (startpos + (startpos + largest_len)) / 2
 
-    angle = center / 270.0
+    angle = center / 270.0 # go towards the center of the array
     angle = rc_utils.clamp(angle, -1, 1)
     rc.drive.set_speed_angle(speed, angle)
     print("center: ", center, "angle: ", angle)
 
-def setAngle(distance):
+def setAngle(distance): # pid controller
     global angle
 
     if distance is not None:
