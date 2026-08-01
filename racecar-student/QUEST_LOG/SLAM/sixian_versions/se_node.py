@@ -123,7 +123,7 @@ class StateEstimationNode(Node):
             dt,
         )
 
-        self.slam.update_occupancy_grid(point_cloud, self.slam.get_state_estimate()) #use pointcloud to update, as well as current pose
+        self.slam.update_occupancy_grid(point_cloud) #use pointcloud to update, as well as current pose
 
     def estimate_callback(self, data): #run when encoder data comes in
         v = velocity_model(float(data.data)) #convert from angular to linear

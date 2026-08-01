@@ -103,7 +103,7 @@ class SLAMController(Node):
             planner = AStarPlanner(
                 self.current_map,
                 obstacle_threshold=self.obstacle_threshold,
-                allow_unknown=False,  # unknown cells treated as impassable
+                allow_unknown=True,  # unknown cells treated as impassable
             )
 
             path = planner.plan(
@@ -138,7 +138,13 @@ class SLAMController(Node):
         drive_msg = AckermannDriveStamped()
         drive_msg.header.stamp = self.get_clock().now().to_msg()
         drive_msg.drive.steering_angle = float(steering_command)
-        drive_msg.drive.speed = float(self.base_speed)
+
+        s = self.base_speed
+
+        if abs(dx) < 0.1 and abs(dy) < 0.1:
+            s = 0
+
+        drive_msg.drive.speed = float(s)
 
         self.drive_pub.publish(drive_msg)
 
