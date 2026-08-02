@@ -75,10 +75,11 @@ def start():
     rc.set_update_slow_time(0.1)
     rc.drive.set_max_speed(MAX_SPEED)
  
-
+#remove redundant image calls
 def update():
     global speed, angle, last_error
-    #markers = rc_utils.get_ar_markers()
+    image = rc.camera.get_color_image()
+    markers = rc_utils.get_ar_markers(image)
     scan = rc.lidar.get_samples()
     dt = rc.get_delta_time()
     scan = process(scan)
@@ -92,9 +93,9 @@ def update():
         speed = -0.6 * abs(angle) + 1   
     else:
         speed = 1
-    str = is_straight(scan)
-    if str:
-        print("Straight")    
+    if len(markers) != 0:
+            for m in markers:
+                print(f"ID: {m.get_id()}")  
     rc.drive.set_speed_angle(rc_utils.clamp(speed, -1,1), rc_utils.clamp(angle - 0.05, -1.0, 1.0))    
 
 def process(scan):
